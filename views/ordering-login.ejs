@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordering System - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/ordering-login.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CLIMBS Canteen Ordering System</h1>
+            <a href="/" class="back-btn">← Back to Home</a>
+        </header>
+
+        <div class="portal-container">
+            <div class="portal-card">
+                <div class="portal-icon">👨‍💼</div>
+                <h2>Employee</h2>
+                <p>Order food with your employee account</p>
+                <button class="btn btn-primary" onclick="showEmployeeLogin()">Employee Login</button>
+            </div>
+
+            <div class="portal-card">
+                <div class="portal-icon">👤</div>
+                <h2>Visitor</h2>
+                <p>Order as a walk-in customer</p>
+                <button class="btn btn-primary" onclick="guestOrder()">Order as Visitor</button>
+            </div>
+
+            <div class="portal-card">
+                <div class="portal-icon">⚙️</div>
+                <h2>Admin</h2>
+                <p>Manage canteen operations</p>
+                <button class="btn btn-primary" onclick="showAdminLogin()">Admin Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Login Modal -->
+    <div id="employeeLoginModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Employee Login</h2>
+                <span class="close" onclick="closeEmployeeLogin()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="employeeLoginForm">
+                    <div class="form-group">
+                        <label for="empId">Employee ID</label>
+                        <input type="text" id="empId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="empPassword">Password</label>
+                        <input type="password" id="empPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div id="empLoginError" class="error-message" style="display: none;"></div>
+                <div class="login-info">
+                    <small>Demo: Employee ID = <strong>EMP001</strong>, Password = <strong>emp123</strong></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Admin Login</h2>
+                <span class="close" onclick="closeAdminLogin()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminUsername">Username</label>
+                        <input type="text" id="adminUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword">Password</label>
+                        <input type="password" id="adminPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div id="adminLoginError" class="error-message" style="display: none;"></div>
+                <div class="login-info">
+                    <small>Username = <strong>admin</strong>, Password = <strong>admin123</strong></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/ordering-login.js"></script>
+</body>
+</html>

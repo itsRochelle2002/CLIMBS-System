@@ -1,0 +1,25 @@
+[
+  {
+    "email": "asenero.rochelle@gmail.com",
+    "password": "asenero0111",
+    "lastName": "Asenero",
+    "firstName": "Rochelle",
+    "middleName": "Azaron",
+    "birthdate": "2002-01-11",
+    "gender": "Female",
+    "civilStatus": "Single",
+    "address": "Zone 3 Cugman, Cagayan de Oro City",
+    "mobile": "09464506251",
+    "telephone": "",
+    "beneficiaryName": "Genesis Rovin Urtal",
+    "relationship": "Son",
+    "beneficiaryContact": "09753243126",
+    "beneficiaryBirthdate": "2022-07-16",
+    "shareAmount": "20000",
+    "paymentMode": "Cash",
+    "status": "verified",
+    "id": 1,
+    "registrationDate": "2026-02-07T13:39:57.455Z",
+    "verifiedDate": "2026-02-07T13:42:28.160Z"
+  }
+]

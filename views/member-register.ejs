@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Registration - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/member-register.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>New Member Registration</h1>
+            <a href="/membership" class="back-btn">← Back to Login</a>
+        </header>
+
+        <!-- Step 1: Account Setup -->
+        <div class="registration-step" id="step1">
+            <div class="step-container">
+                <div class="step-header">
+                    <h2>Step 1: Create Your Account</h2>
+                    <p>Set up your login credentials</p>
+                </div>
+
+                <form id="accountForm">
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" required>
+                            <small>This will be your username for login</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="password">Password *</label>
+                                <input type="password" id="password" minlength="6" required>
+                                <small>Minimum 6 characters</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm Password *</label>
+                                <input type="password" id="confirmPassword" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Next: Fill Membership Form →</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Step 2: Membership Form -->
+        <div class="registration-step" id="step2" style="display: none;">
+            <div class="step-container">
+                <div class="step-header">
+                    <h2>Step 2: Membership Application Form</h2>
+                    <p>Complete your membership information</p>
+                </div>
+
+                <div class="form-container" id="printableArea">
+                    <div class="form-logo">
+                        <h3>CLIMBS Life and General Insurance Cooperative</h3>
+                        <p>Membership Application Form</p>
+                    </div>
+
+                    <form id="membershipForm">
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h3>Personal Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="lastName">Last Name *</label>
+                                    <input type="text" id="lastName" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="firstName">First Name *</label>
+                                    <input type="text" id="firstName" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="middleName">Middle Name</label>
+                                    <input type="text" id="middleName">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="birthdate">Date of Birth *</label>
+                                    <input type="date" id="birthdate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender">Gender *</label>
+                                    <select id="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="civilStatus">Civil Status *</label>
+                                    <select id="civilStatus" required>
+                                        <option value="">Select Status</option>
+                                        <option value="Single">Single</option>
+                                        <option value="Married">Married</option>
+                                        <option value="Widowed">Widowed</option>
+                                        <option value="Separated">Separated</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="form-section">
+                            <h3>Contact Information</h3>
+                            
+                            <div class="form-group">
+                                <label for="address">Complete Address *</label>
+                                <textarea id="address" rows="3" required></textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="mobile">Mobile Number *</label>
+                                    <input type="tel" id="mobile" placeholder="09XX-XXX-XXXX" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="telephone">Telephone (Optional)</label>
+                                    <input type="tel" id="telephone">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Beneficiary Information -->
+                        <div class="form-section">
+                            <h3>Beneficiary Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="beneficiaryName">Beneficiary Full Name *</label>
+                                    <input type="text" id="beneficiaryName" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="relationship">Relationship *</label>
+                                    <input type="text" id="relationship" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="beneficiaryContact">Beneficiary Contact Number *</label>
+                                    <input type="tel" id="beneficiaryContact" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="beneficiaryBirthdate">Beneficiary Birthdate *</label>
+                                    <input type="date" id="beneficiaryBirthdate" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Share Capital -->
+                        <div class="form-section">
+                            <h3>Share Capital Subscription</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="shareAmount">Initial Share Amount (₱) *</label>
+                                    <input type="number" id="shareAmount" min="100" step="100" required>
+                                    <small>Minimum: ₱100.00</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="paymentMode">Payment Mode *</label>
+                                    <select id="paymentMode" required>
+                                        <option value="">Select Payment Mode</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Check">Check</option>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Signature Section -->
+                        <div class="form-section signature-section">
+                            <h3>Applicant's Signature</h3>
+                            <div class="signature-box">
+                                <p>I hereby apply for membership in CLIMBS Life and General Insurance Cooperative and agree to abide by its by-laws and regulations.</p>
+                                <div class="signature-line">
+                                    <div class="sig-line">
+                                        <span>_________________________________</span>
+                                        <small>Signature Over Printed Name</small>
+                                    </div>
+                                    <div class="sig-line">
+                                        <span>_________________________________</span>
+                                        <small>Date</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions no-print">
+                            <button type="button" class="btn btn-secondary" onclick="goBackToStep1()">← Back</button>
+                            <button type="submit" class="btn btn-primary">💾 Save Application</button>
+                            <button type="button" class="btn btn-print" onclick="printForm()">🖨️ Print Form</button>
+                        </div>
+
+                        <!-- Success Message -->
+                        <div id="successMessage" class="success-message" style="display: none;"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/member-register.js"></script>
+</body>
+</html>

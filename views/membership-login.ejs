@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Portal - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/membership-login.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CLIMBS Membership Portal</h1>
+            <a href="/" class="back-btn">← Back to Home</a>
+        </header>
+
+        <div class="portal-container">
+            <div class="portal-card">
+                <div class="portal-icon">👤</div>
+                <h2>Member Login</h2>
+                <p>Login to view your membership details</p>
+                <button class="btn btn-primary" onclick="showMemberLogin()">Member Login</button>
+                <button class="btn btn-secondary" onclick="showRegisterForm()">Register as New Member</button>
+            </div>
+
+            <div class="portal-card">
+                <div class="portal-icon">👨‍💼</div>
+                <h2>Admin Login</h2>
+                <p>Access admin panel to manage members</p>
+                <button class="btn btn-primary" onclick="showAdminLogin()">Admin Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member Login Modal -->
+    <div id="memberLoginModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Member Login</h2>
+                <span class="close" onclick="closeMemberLogin()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="memberLoginForm">
+                    <div class="form-group">
+                        <label for="memberEmail">Email Address</label>
+                        <input type="email" id="memberEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="memberPassword">Password</label>
+                        <input type="password" id="memberPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div id="memberLoginError" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Admin Login</h2>
+                <span class="close" onclick="closeAdminLogin()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminUsername">Username</label>
+                        <input type="text" id="adminUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword">Password</label>
+                        <input type="password" id="adminPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div id="adminLoginError" class="error-message" style="display: none;"></div>
+                <div class="login-info">
+                    <small>Default Admin: username = <strong>admin</strong>, password = <strong>admin123</strong></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/membership-login.js"></script>
+</body>
+</html>

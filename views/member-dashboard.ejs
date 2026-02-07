@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Dashboard - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/member-dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Member Dashboard</h1>
+            <div class="header-actions">
+                <span class="user-info">Welcome, <strong id="memberName"></strong></span>
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <div class="member-card">
+                <h2>Your Membership Information</h2>
+                <div class="member-info" id="memberInfo">
+                    <!-- Member info will be loaded here -->
+                </div>
+                
+                <div class="status-section">
+                    <h3>Membership Status</h3>
+                    <div class="status-badge" id="statusBadge">
+                        <!-- Status will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/member-dashboard.js"></script>
+</body>
+</html>

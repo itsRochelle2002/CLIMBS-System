@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordering System - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/ordering.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CLIMBS Employee Ordering System</h1>
+            <a href="/" class="back-btn">← Back to Home</a>
+        </header>
+
+        <div class="ordering-container">
+            <!-- Menu Section -->
+            <div class="menu-section">
+                <h2>Menu</h2>
+                <div class="menu-categories">
+                    <button class="category-btn active" onclick="filterCategory('all')">All Items</button>
+                    <button class="category-btn" onclick="filterCategory('meals')">Meals</button>
+                    <button class="category-btn" onclick="filterCategory('drinks')">Drinks</button>
+                    <button class="category-btn" onclick="filterCategory('snacks')">Snacks</button>
+                </div>
+
+                <div class="menu-grid" id="menuGrid">
+                    <!-- Menu items will be loaded here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Order Summary Section -->
+            <div class="order-section">
+                <h2>Order Summary</h2>
+                
+                <div class="employee-info">
+                    <div class="form-group">
+                        <label for="employeeName">Employee Name:</label>
+                        <input type="text" id="employeeName" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeeId">Employee ID:</label>
+                        <input type="text" id="employeeId" placeholder="Enter your ID" required>
+                    </div>
+                </div>
+
+                <div class="order-items" id="orderItems">
+                    <p class="empty-cart">Your cart is empty. Add items from the menu.</p>
+                </div>
+
+                <div class="order-summary">
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">₱0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span><strong>Total:</strong></span>
+                        <span id="total"><strong>₱0.00</strong></span>
+                    </div>
+                </div>
+
+                <div class="payment-section">
+                    <h3>Payment</h3>
+                    <div class="form-group">
+                        <label for="amountPaid">Amount Paid (₱):</label>
+                        <input type="number" id="amountPaid" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <div class="change-display">
+                        <span>Change:</span>
+                        <span id="change">₱0.00</span>
+                    </div>
+                </div>
+
+                <div class="order-actions">
+                    <button class="btn btn-primary" onclick="placeOrder()">Place Order</button>
+                    <button class="btn btn-secondary" onclick="clearOrder()">Clear Order</button>
+                </div>
+
+                <div id="orderSuccess" class="success-message" style="display: none;">
+                    <p>✓ Order placed successfully!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/ordering.js"></script>
+</body>
+</html>

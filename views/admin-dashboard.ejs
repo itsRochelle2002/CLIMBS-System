@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin-dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Admin - Membership Management</h1>
+            <div class="header-actions">
+                <span class="user-info">Admin Panel</span>
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <div class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMembers">0</div>
+                    <div class="stat-label">Total Members</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingMembers">0</div>
+                    <div class="stat-label">Pending Verification</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="verifiedMembers">0</div>
+                    <div class="stat-label">Verified Members</div>
+                </div>
+            </div>
+
+            <div class="members-section">
+                <h2>All Members</h2>
+                <div class="filter-section">
+                    <button class="filter-btn active" onclick="filterMembers('all')">All</button>
+                    <button class="filter-btn" onclick="filterMembers('pending')">Pending</button>
+                    <button class="filter-btn" onclick="filterMembers('verified')">Verified</button>
+                </div>
+
+                <table class="members-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Date Registered</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="membersTableBody">
+                        <!-- Members will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- View Member Modal -->
+            <div id="viewMemberModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Member Details</h2>
+                        <span class="close" onclick="closeViewMember()">&times;</span>
+                    </div>
+                    <div class="modal-body" id="memberDetailsBody">
+                        <!-- Member details will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

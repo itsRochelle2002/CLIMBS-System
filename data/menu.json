@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "name": "Chicken Adobo",
+    "price": 85,
+    "category": "meals",
+    "emoji": "🍗"
+  },
+  {
+    "id": 2,
+    "name": "Pork Sinigang",
+    "price": 90,
+    "category": "meals",
+    "emoji": "🍲"
+  },
+  {
+    "id": 3,
+    "name": "Beef Tapa",
+    "price": 95,
+    "category": "meals",
+    "emoji": "🥩"
+  },
+  {
+    "id": 4,
+    "name": "Iced Coffee",
+    "price": 45,
+    "category": "drinks",
+    "emoji": "☕"
+  },
+  {
+    "id": 5,
+    "name": "Fresh Juice",
+    "price": 40,
+    "category": "drinks",
+    "emoji": "🧃"
+  },
+  {
+    "id": 6,
+    "name": "Lumpia",
+    "price": 35,
+    "category": "snacks",
+    "emoji": "🥟"
+  }
+]
