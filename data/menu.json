@@ -1,12 +1,5 @@
 [
   {
-    "id": 1,
-    "name": "Chicken Adobo",
-    "price": 85,
-    "category": "meals",
-    "emoji": "🍗"
-  },
-  {
     "id": 2,
     "name": "Pork Sinigang",
     "price": 90,
@@ -40,5 +33,15 @@
     "price": 35,
     "category": "snacks",
     "emoji": "🥟"
+  },
+  {
+    "id": 1770506166077,
+    "name": "Lugaw with egg",
+    "emoji": "🍛",
+    "category": "meals",
+    "price": 55,
+    "stock": 30,
+    "minStock": 30,
+    "available": true
   }
 ]
