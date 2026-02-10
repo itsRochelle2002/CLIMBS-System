@@ -31,8 +31,18 @@
             <div class="cart-panel">
                 <h2>Your Order</h2>
                 
-                <div class="customer-info">
-                    <input type="text" id="customerName" placeholder="Your Name (Optional)">
+                <div class="payment-method-section">
+                    <h3>Payment Method</h3>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="visitorPayment" value="cash" checked>
+                            <span class="payment-label">💵 Cash</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="visitorPayment" value="ewallet">
+                            <span class="payment-label">📱 E-Wallet (GCash/PayMaya)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="cart-items" id="cartItems">
@@ -51,14 +61,37 @@
                 </div>
 
                 <div class="payment-section">
-                    <h3>Payment</h3>
-                    <div class="form-group">
-                        <label>Amount Paid (₱)</label>
-                        <input type="number" id="amountPaid" min="0" step="0.01">
+                    <h3>Payment Details</h3>
+                    
+                    <!-- Cash Payment Section -->
+                    <div id="cashPaymentDetails" class="payment-details">
+                        <div class="form-group">
+                            <label>Amount Paid (₱)</label>
+                            <input type="number" id="amountPaid" min="0" step="0.01">
+                        </div>
+                        <div class="change-display">
+                            <span>Change:</span>
+                            <span id="changeAmount">₱0.00</span>
+                        </div>
                     </div>
-                    <div class="change-display">
-                        <span>Change:</span>
-                        <span id="changeAmount">₱0.00</span>
+                    
+                    <!-- E-Wallet Payment Section -->
+                    <div id="ewalletPaymentDetails" class="payment-details" style="display: none;">
+                        <div class="ewallet-info">
+                            <p><strong>Scan QR Code or Send to:</strong></p>
+                            <div class="qr-code">
+                                <div class="qr-placeholder">
+                                    📱<br>
+                                    QR Code Here
+                                </div>
+                            </div>
+                            <p class="ewallet-number"><strong>GCash/PayMaya:</strong> 0917-123-4567</p>
+                            <p class="ewallet-name"><strong>Account Name:</strong> CLIMBS Canteen</p>
+                            <div class="form-group">
+                                <label>Reference Number</label>
+                                <input type="text" id="ewalletReference" placeholder="Enter reference number">
+                            </div>
+                        </div>
                     </div>
                 </div>
 

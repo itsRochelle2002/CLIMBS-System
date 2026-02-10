@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Profile - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin-profile.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>⚙️ Admin Profile Settings</h1>
+            </div>
+            <div class="header-right">
+                <a href="/admin-ordering" class="btn btn-back">← Back to Dashboard</a>
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="profile-container">
+            <!-- Profile Picture Section -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h2>Profile Picture</h2>
+                </div>
+                
+                <div class="profile-picture-container">
+                    <div class="profile-picture" id="profilePicture">
+                        <img id="profileImage" src="" alt="Admin" style="display: none;">
+                        <div id="profileInitials" class="profile-initials">A</div>
+                    </div>
+                    
+                    <div class="picture-actions">
+                        <input type="file" id="profileImageInput" accept="image/*" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('profileImageInput').click()">
+                            📷 Upload Photo
+                        </button>
+                        <button class="btn btn-secondary" onclick="removeProfilePicture()">
+                            Remove Photo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Basic Information Section -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h2>Basic Information</h2>
+                </div>
+                
+                <form id="profileInfoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name *</label>
+                            <input type="text" id="fullName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="position">Position</label>
+                            <input type="text" id="position" value="System Administrator" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <textarea id="address" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Information</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Security Section -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h2>Security Settings</h2>
+                </div>
+                
+                <form id="securityForm">
+                    <div class="form-group">
+                        <label for="username">Username *</label>
+                        <input type="text" id="username" required>
+                        <small>This will be used for login</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password *</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" minlength="6">
+                            <small>Leave blank to keep current password</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Update Security</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- System Information -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h2>System Information</h2>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Account Created</div>
+                        <div class="info-value" id="accountCreated">January 1, 2024</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Login</div>
+                        <div class="info-value" id="lastLogin">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Role</div>
+                        <div class="info-value">Administrator</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">
+                            <span class="status-badge status-active">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-profile.js"></script>
+</body>
+</html>

@@ -201,9 +201,11 @@ function closeMenuItemModal() {
 document.getElementById('menuItemForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const itemId = document.getElementById('itemId').value;
+    const itemIdInput = document.getElementById('itemId').value;
+    const itemId = itemIdInput ? parseInt(itemIdInput) : Date.now();
+    
     const itemData = {
-        id: itemId || Date.now(),
+        id: itemId,
         name: document.getElementById('itemName').value.trim(),
         emoji: document.getElementById('itemEmoji').value.trim(),
         category: document.getElementById('itemCategory').value,
@@ -213,8 +215,12 @@ document.getElementById('menuItemForm').addEventListener('submit', async functio
         available: document.getElementById('itemAvailable').checked
     };
     
+    console.log('Submitting item data:', itemData); // Debug log
+    
     try {
-        const url = itemId ? '/api/ordering/admin/update-menu-item' : '/api/ordering/admin/add-menu-item';
+        const url = itemIdInput ? '/api/ordering/admin/update-menu-item' : '/api/ordering/admin/add-menu-item';
+        console.log('Using URL:', url); // Debug log
+        
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -224,18 +230,20 @@ document.getElementById('menuItemForm').addEventListener('submit', async functio
         });
         
         const result = await response.json();
+        console.log('Server response:', result); // Debug log
         
         if (result.success) {
-            alert(itemId ? 'Menu item updated!' : 'Menu item added!');
-            loadMenuItems();
-            loadInventory();
+            alert(itemIdInput ? 'Menu item updated successfully!' : 'Menu item added successfully!');
+            await loadMenuItems();
+            await loadInventory();
             closeMenuItemModal();
         } else {
-            alert('Error saving menu item');
+            alert('Error saving menu item: ' + (result.error || 'Unknown error'));
+            console.error('Save error:', result);
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error saving menu item');
+        alert('Error saving menu item: ' + error.message);
     }
 });
 
@@ -533,7 +541,22 @@ async function generateDailyReport() {
 function displayDailyReport(report) {
     const content = document.getElementById('dailyReportContent');
     
+    const reportDate = document.getElementById('dailyDate').value;
+    const formattedDate = new Date(reportDate).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
     content.innerHTML = `
+        <div class="report-header-section">
+            <div class="report-title-area">
+                <h2>CLIMBS Canteen Daily Sales Report</h2>
+                <p class="report-date">${formattedDate}</p>
+            </div>
+            <button class="btn btn-print no-print" onclick="printDailyReport()">🖨️ Print Report</button>
+        </div>
+        
         <div class="report-summary">
             <div class="report-stat">
                 <div class="report-stat-value">${report.totalOrders}</div>
@@ -559,16 +582,149 @@ function displayDailyReport(report) {
                 </tr>
             </thead>
             <tbody>
-                ${report.topItems.map(item => `
+                ${report.topItems.length > 0 ? report.topItems.map(item => `
                     <tr>
                         <td>${item.name}</td>
                         <td>${item.quantity}</td>
                         <td>₱${item.revenue.toFixed(2)}</td>
                     </tr>
-                `).join('')}
+                `).join('') : '<tr><td colspan="3" style="text-align: center;">No sales for this date</td></tr>'}
             </tbody>
         </table>
+        
+        <div class="report-footer no-print">
+            <p>Report generated on ${new Date().toLocaleString()}</p>
+        </div>
     `;
+}
+
+// Add print function for daily report
+function printDailyReport() {
+    const reportDate = document.getElementById('dailyDate').value;
+    const formattedDate = new Date(reportDate).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    // Get the report content
+    const reportContent = document.getElementById('dailyReportContent').innerHTML;
+    
+    // Create print window
+    const printWindow = window.open('', '', 'width=800,height=600');
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Daily Sales Report - ${formattedDate}</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    padding: 40px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                .report-header-section {
+                    text-align: center;
+                    margin-bottom: 40px;
+                    border-bottom: 3px solid #667eea;
+                    padding-bottom: 20px;
+                }
+                .report-title-area h2 {
+                    color: #667eea;
+                    margin: 0 0 10px 0;
+                    font-size: 2em;
+                }
+                .report-date {
+                    color: #666;
+                    font-size: 1.2em;
+                    margin: 0;
+                }
+                .report-summary {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .report-stat {
+                    background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+                    padding: 25px;
+                    border-radius: 12px;
+                    text-align: center;
+                    border: 2px solid #667eea;
+                }
+                .report-stat-value {
+                    font-size: 2.5em;
+                    font-weight: 700;
+                    color: #667eea;
+                    margin-bottom: 8px;
+                }
+                .report-stat-label {
+                    color: #666;
+                    font-size: 0.95em;
+                }
+                h4 {
+                    color: #667eea;
+                    margin-top: 30px;
+                    margin-bottom: 15px;
+                    font-size: 1.3em;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th, td {
+                    padding: 12px 15px;
+                    text-align: left;
+                    border-bottom: 1px solid #eee;
+                }
+                th {
+                    background: #667eea;
+                    color: white;
+                    font-weight: 600;
+                }
+                tbody tr:hover {
+                    background: #f8f9fa;
+                }
+                .report-footer {
+                    margin-top: 40px;
+                    padding-top: 20px;
+                    border-top: 2px solid #eee;
+                    text-align: center;
+                    color: #666;
+                    font-size: 0.9em;
+                }
+                .no-print {
+                    display: none;
+                }
+                @media print {
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${reportContent}
+            <div class="report-footer">
+                <p><strong>CLIMBS Life and General Insurance Cooperative</strong></p>
+                <p>Canteen Management System</p>
+                <p>Report generated on ${new Date().toLocaleString()}</p>
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
 }
 
 async function generateMonthlyReport() {

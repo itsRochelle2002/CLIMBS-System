@@ -9,6 +9,7 @@ let cart = [];
 let menuItems = [];
 let orderHistory = [];
 let favorites = [];
+let lastOrderId = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -18,11 +19,50 @@ document.addEventListener('DOMContentLoaded', function() {
     loadOrderHistory();
     loadFavorites();
     loadCreditInfo();
+    
+    // Add payment method change listener
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+        radio.addEventListener('change', handlePaymentMethodChange);
+    });
+    
+    // Add cash amount paid listener
+    const cashInput = document.getElementById('cashAmountPaid');
+    if (cashInput) {
+        cashInput.addEventListener('input', calculateCashChange);
+    }
 });
 
 // Display employee info
 function displayEmployeeInfo() {
     document.getElementById('employeeBadge').textContent = `${employee.name} (${employee.empId})`;
+}
+
+// Handle payment method change
+function handlePaymentMethodChange() {
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const cashSection = document.getElementById('cashPaymentSection');
+    
+    if (paymentMethod === 'cash') {
+        cashSection.style.display = 'block';
+    } else {
+        cashSection.style.display = 'none';
+    }
+}
+
+// Calculate cash change
+function calculateCashChange() {
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const amountPaid = parseFloat(document.getElementById('cashAmountPaid').value) || 0;
+    const change = amountPaid - total;
+    
+    const changeDisplay = document.getElementById('cashChange');
+    if (change >= 0) {
+        changeDisplay.textContent = `₱${change.toFixed(2)}`;
+        changeDisplay.style.color = '#28a745';
+    } else {
+        changeDisplay.textContent = `₱${Math.abs(change).toFixed(2)} short`;
+        changeDisplay.style.color = '#dc3545';
+    }
 }
 
 // Load wallet balance
@@ -82,7 +122,6 @@ function displayMenuItems(category) {
 
 // Filter menu
 function filterMenu(category) {
-    // Update active button
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -144,6 +183,7 @@ function updateCartDisplay() {
     }
     
     updateCartTotals();
+    calculateCashChange();
 }
 
 // Increase quantity
@@ -198,11 +238,17 @@ async function placeOrder() {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // Check wallet balance if paying with wallet
+    // Validate payment
     if (paymentMethod === 'wallet') {
         const walletBalance = parseFloat(document.getElementById('walletBalance').textContent.replace('₱', ''));
         if (walletBalance < total) {
-            alert('Insufficient wallet balance! Please top up or use credit.');
+            alert('Insufficient wallet balance! Please top up or use another payment method.');
+            return;
+        }
+    } else if (paymentMethod === 'cash') {
+        const amountPaid = parseFloat(document.getElementById('cashAmountPaid').value) || 0;
+        if (amountPaid < total) {
+            alert('Insufficient cash payment!');
             return;
         }
     }
@@ -216,6 +262,12 @@ async function placeOrder() {
         orderDate: new Date().toISOString()
     };
     
+    if (paymentMethod === 'cash') {
+        const amountPaid = parseFloat(document.getElementById('cashAmountPaid').value);
+        orderData.amountPaid = amountPaid;
+        orderData.change = amountPaid - total;
+    }
+    
     try {
         const response = await fetch('/api/ordering/place-order', {
             method: 'POST',
@@ -228,16 +280,30 @@ async function placeOrder() {
         const result = await response.json();
         
         if (result.success) {
+            lastOrderId = result.orderId;
+            
             // Show success modal
             const successMsg = document.getElementById('orderSuccessMessage');
+            let paymentInfo = '';
+            
+            if (paymentMethod === 'wallet') {
+                paymentInfo = `<p><strong>Payment:</strong> Wallet</p><p><strong>New Balance:</strong> ₱${result.newBalance.toFixed(2)}</p>`;
+            } else if (paymentMethod === 'cash') {
+                paymentInfo = `<p><strong>Payment:</strong> Cash</p><p><strong>Amount Paid:</strong> ₱${orderData.amountPaid.toFixed(2)}</p><p><strong>Change:</strong> ₱${orderData.change.toFixed(2)}</p>`;
+            } else {
+                paymentInfo = `<p><strong>Payment:</strong> Credit (Pay Later)</p>`;
+            }
+            
             successMsg.innerHTML = `
                 <h3>Order #${result.orderId}</h3>
                 <p><strong>Total:</strong> ₱${total.toFixed(2)}</p>
-                <p><strong>Payment:</strong> ${paymentMethod === 'wallet' ? 'Wallet' : 'Credit (Pay Later)'}</p>
-                ${paymentMethod === 'wallet' ? `<p><strong>New Balance:</strong> ₱${result.newBalance.toFixed(2)}</p>` : ''}
+                ${paymentInfo}
                 <p class="success-note">Your order has been placed successfully!</p>
             `;
             document.getElementById('orderSuccessModal').style.display = 'block';
+            
+            // Show receipt button
+            document.getElementById('receiptBtn').style.display = 'block';
             
             // Clear cart and reload data
             cart = [];
@@ -245,7 +311,11 @@ async function placeOrder() {
             loadWalletBalance();
             loadOrderHistory();
             loadCreditInfo();
-            loadMenuItems(); // Reload to update stock
+            loadMenuItems();
+            
+            // Reset cash payment fields
+            document.getElementById('cashAmountPaid').value = '';
+            document.getElementById('cashChange').textContent = '₱0.00';
         } else {
             alert('Error placing order: ' + result.error);
         }
@@ -253,6 +323,120 @@ async function placeOrder() {
         console.error('Error:', error);
         alert('Error placing order. Please try again.');
     }
+}
+
+// Print receipt
+function printReceipt() {
+    if (!lastOrderId) {
+        alert('No recent order to print');
+        return;
+    }
+    
+    // Find the order
+    const order = orderHistory.find(o => o.id === lastOrderId);
+    if (!order) {
+        alert('Order not found');
+        return;
+    }
+    
+    // Create receipt HTML
+    const receiptHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Receipt - Order #${order.id}</title>
+            <style>
+                body {
+                    font-family: 'Courier New', monospace;
+                    max-width: 400px;
+                    margin: 20px auto;
+                }
+                .receipt {
+                    border: 2px dashed #333;
+                    padding: 20px;
+                }
+                .receipt-header {
+                    text-align: center;
+                    border-bottom: 2px dashed #333;
+                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                }
+                .receipt-info div {
+                    margin-bottom: 5px;
+                }
+                .receipt-items {
+                    border-top: 2px dashed #333;
+                    border-bottom: 2px dashed #333;
+                    padding: 15px 0;
+                    margin: 15px 0;
+                }
+                .receipt-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 8px;
+                }
+                .receipt-total {
+                    font-size: 1.2em;
+                    font-weight: bold;
+                    text-align: right;
+                    margin-top: 10px;
+                }
+                .receipt-footer {
+                    text-align: center;
+                    margin-top: 15px;
+                    border-top: 2px dashed #333;
+                    padding-top: 15px;
+                    font-size: 0.9em;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="receipt">
+                <div class="receipt-header">
+                    <h2>CLIMBS CANTEEN</h2>
+                    <p>Official Receipt</p>
+                </div>
+                
+                <div class="receipt-info">
+                    <div><strong>Order #:</strong> ${order.id}</div>
+                    <div><strong>Employee:</strong> ${order.employeeName}</div>
+                    <div><strong>ID:</strong> ${order.empId}</div>
+                    <div><strong>Date:</strong> ${new Date(order.orderDate).toLocaleString()}</div>
+                    <div><strong>Payment:</strong> ${order.paymentMethod.toUpperCase()}</div>
+                </div>
+                
+                <div class="receipt-items">
+                    <h4>ITEMS:</h4>
+                    ${order.items.map(item => `
+                        <div class="receipt-item">
+                            <span>${item.name} x${item.quantity}</span>
+                            <span>₱${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="receipt-total">
+                    <div>TOTAL: ₱${order.total.toFixed(2)}</div>
+                    ${order.amountPaid ? `<div>PAID: ₱${order.amountPaid.toFixed(2)}</div>` : ''}
+                    ${order.change ? `<div>CHANGE: ₱${order.change.toFixed(2)}</div>` : ''}
+                </div>
+                
+                <div class="receipt-footer">
+                    <p>Thank you for your order!</p>
+                    <p>CLIMBS Life and General Insurance Cooperative</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    // Open print window
+    const printWindow = window.open('', '', 'width=400,height=600');
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
 }
 
 // Close order success modal
@@ -361,13 +545,12 @@ function reorder(orderId) {
     const order = orderHistory.find(o => o.id === orderId);
     if (!order) return;
     
-    // Clear current cart and add order items
     cart = order.items.map(item => ({
         id: item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        maxStock: 999 // Will be updated when menu loads
+        maxStock: 999
     }));
     
     updateCartDisplay();
@@ -461,17 +644,14 @@ function displayCreditHistory(creditHistory) {
 
 // Show section
 function showSection(section) {
-    // Hide all sections
     document.querySelectorAll('.content-section').forEach(sec => {
         sec.style.display = 'none';
     });
     
-    // Update nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // Show selected section
     if (section === 'order') {
         document.getElementById('orderSection').style.display = 'block';
         event.target.classList.add('active');

@@ -7,7 +7,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add event listener for amount paid
     document.getElementById('amountPaid').addEventListener('input', calculateChange);
+    
+    // Add payment method change listener
+    document.querySelectorAll('input[name="visitorPayment"]').forEach(radio => {
+        radio.addEventListener('change', handlePaymentMethodChange);
+    });
 });
+
+// Handle payment method change
+function handlePaymentMethodChange() {
+    const paymentMethod = document.querySelector('input[name="visitorPayment"]:checked').value;
+    const cashDetails = document.getElementById('cashPaymentDetails');
+    const ewalletDetails = document.getElementById('ewalletPaymentDetails');
+    
+    if (paymentMethod === 'cash') {
+        cashDetails.style.display = 'block';
+        ewalletDetails.style.display = 'none';
+    } else {
+        cashDetails.style.display = 'none';
+        ewalletDetails.style.display = 'block';
+    }
+}
 
 // Load menu items
 async function loadMenuItems() {
@@ -183,26 +203,39 @@ async function placeOrder() {
     }
     
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+    const paymentMethod = document.querySelector('input[name="visitorPayment"]:checked').value;
     
-    if (amountPaid < total) {
-        alert('Insufficient payment amount!');
-        return;
-    }
-    
-    const customerName = document.getElementById('customerName').value.trim() || 'Walk-in Customer';
-    const change = amountPaid - total;
-    
-    const orderData = {
+    let orderData = {
         customerType: 'visitor',
-        customerName: customerName,
+        customerName: 'Walk-in Customer',
         items: cart,
         total: total,
-        amountPaid: amountPaid,
-        change: change,
-        paymentMethod: 'cash',
+        paymentMethod: paymentMethod,
         orderDate: new Date().toISOString()
     };
+    
+    // Validate payment
+    if (paymentMethod === 'cash') {
+        const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        
+        if (amountPaid < total) {
+            alert('Insufficient payment amount!');
+            return;
+        }
+        
+        const change = amountPaid - total;
+        orderData.amountPaid = amountPaid;
+        orderData.change = change;
+    } else if (paymentMethod === 'ewallet') {
+        const reference = document.getElementById('ewalletReference').value.trim();
+        
+        if (!reference) {
+            alert('Please enter e-wallet reference number!');
+            return;
+        }
+        
+        orderData.ewalletReference = reference;
+    }
     
     try {
         const response = await fetch('/api/ordering/place-order', {
@@ -216,13 +249,22 @@ async function placeOrder() {
         const result = await response.json();
         
         if (result.success) {
-            alert(`Order placed successfully!\n\nOrder #${result.orderId}\nTotal: ₱${total.toFixed(2)}\nChange: ₱${change.toFixed(2)}\n\nThank you!`);
+            let message = `Order placed successfully!\n\nOrder #${result.orderId}\nTotal: ₱${total.toFixed(2)}`;
+            
+            if (paymentMethod === 'cash') {
+                message += `\nPaid: ₱${orderData.amountPaid.toFixed(2)}\nChange: ₱${orderData.change.toFixed(2)}`;
+            } else {
+                message += `\nPayment: E-Wallet\nReference: ${orderData.ewalletReference}`;
+            }
+            
+            message += '\n\nThank you!';
+            alert(message);
             
             // Clear cart and form
             cart = [];
             updateCartDisplay();
-            document.getElementById('customerName').value = '';
             document.getElementById('amountPaid').value = '';
+            document.getElementById('ewalletReference').value = '';
             
             // Reload menu to update stock
             loadMenuItems();

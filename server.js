@@ -2,13 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const app = express();
 const PORT = 3000;
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware (higher limit for profile image base64)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
@@ -264,6 +265,51 @@ app.post('/api/ordering/employee-login', (req, res) => {
     } catch (error) {
         res.json({ success: false, message: 'Login failed' });
     }
+});
+
+// API: Employee Registration
+app.post('/api/ordering/employee-register', (req, res) => {
+    try {
+        const employeeData = req.body;
+        
+        if (!employeeData || !employeeData.empId) {
+            return res.status(400).json({ success: false, message: 'No data received' });
+        }
+        
+        const empFile = './data/employees.json';
+        let employees = [];
+        
+        if (fs.existsSync(empFile)) {
+            const data = fs.readFileSync(empFile, 'utf8');
+            employees = JSON.parse(data);
+        }
+        
+        // Check if employee ID already exists
+        const empExists = employees.find(e => e.empId === employeeData.empId);
+        if (empExists) {
+            return res.json({ success: false, message: 'Employee ID already registered' });
+        }
+        
+        // Check if email already exists
+        const emailExists = employees.find(e => e.email === employeeData.email);
+        if (emailExists) {
+            return res.json({ success: false, message: 'Email already registered' });
+        }
+        
+        // Add new employee
+        employees.push(employeeData);
+        fs.writeFileSync(empFile, JSON.stringify(employees, null, 2));
+        
+        res.json({ success: true, message: 'Registration successful' });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.json({ success: false, message: 'Registration failed' });
+    }
+});
+
+// Add route for employee registration page
+app.get('/employee-register', (req, res) => {
+    res.render('employee-register');
 });
 
 // API: Admin Login (Ordering)
@@ -540,6 +586,163 @@ app.get('/api/ordering/admin/overview', (req, res) => {
     }
 });
 
+// Initialize admin profile
+function initializeAdminProfile() {
+    const adminProfileFile = './data/admin-profile.json';
+    if (!fs.existsSync(adminProfileFile)) {
+        const defaultProfile = {
+            fullName: 'Administrator',
+            email: 'admin@climbs.com',
+            phone: '',
+            address: '',
+            username: 'admin',
+            password: 'admin123',
+            profileImage: '',
+            accountCreated: new Date().toISOString()
+        };
+        fs.writeFileSync(adminProfileFile, JSON.stringify(defaultProfile, null, 2));
+    }
+}
+
+// Call this in initialization section
+initializeAdminProfile();
+
+// Add route for admin profile page
+app.get('/admin-profile', (req, res) => {
+    res.render('admin-profile');
+});
+
+// API: Get admin profile
+app.get('/api/ordering/admin/profile', (req, res) => {
+    try {
+        const profileFile = './data/admin-profile.json';
+        let profile = {};
+        
+        if (fs.existsSync(profileFile)) {
+            const data = fs.readFileSync(profileFile, 'utf8');
+            profile = JSON.parse(data);
+        }
+        
+        // Don't send password to client
+        const { password, ...profileData } = profile;
+        
+        res.json({ success: true, profile: profileData });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update admin profile
+app.post('/api/ordering/admin/update-profile', (req, res) => {
+    try {
+        const { fullName, email, phone, address } = req.body;
+        const profileFile = './data/admin-profile.json';
+        
+        let profile = {};
+        if (fs.existsSync(profileFile)) {
+            const data = fs.readFileSync(profileFile, 'utf8');
+            profile = JSON.parse(data);
+        }
+        
+        // Update profile
+        profile.fullName = fullName;
+        profile.email = email;
+        profile.phone = phone;
+        profile.address = address;
+        
+        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update profile image (accepts base64; body limit 10mb in middleware)
+app.post('/api/ordering/admin/update-profile-image', (req, res) => {
+    try {
+        const profileImage = req.body && req.body.profileImage;
+        const profileFile = './data/admin-profile.json';
+        
+        let profile = {};
+        if (fs.existsSync(profileFile)) {
+            const data = fs.readFileSync(profileFile, 'utf8');
+            profile = JSON.parse(data);
+        }
+        
+        // Only update if we got a string (empty string = remove image)
+        if (typeof profileImage === 'string') {
+            profile.profileImage = profileImage;
+        }
+        
+        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2), 'utf8');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update profile image error:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update security (username/password)
+app.post('/api/ordering/admin/update-security', (req, res) => {
+    try {
+        const { username, currentPassword, newPassword } = req.body;
+        const profileFile = './data/admin-profile.json';
+        
+        let profile = {};
+        if (fs.existsSync(profileFile)) {
+            const data = fs.readFileSync(profileFile, 'utf8');
+            profile = JSON.parse(data);
+        }
+        
+        // Verify current password
+        if (profile.password !== currentPassword) {
+            return res.json({ success: false, error: 'Current password is incorrect' });
+        }
+        
+        // Update username
+        profile.username = username;
+        
+        // Update password if provided
+        if (newPassword) {
+            profile.password = newPassword;
+        }
+        
+        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Update admin login API to use profile data
+app.post('/api/ordering/admin-login', (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const profileFile = './data/admin-profile.json';
+        
+        let adminCredentials = { username: 'admin', password: 'admin123' };
+        
+        if (fs.existsSync(profileFile)) {
+            const data = fs.readFileSync(profileFile, 'utf8');
+            const profile = JSON.parse(data);
+            adminCredentials = {
+                username: profile.username || 'admin',
+                password: profile.password || 'admin123'
+            };
+        }
+        
+        if (username === adminCredentials.username && password === adminCredentials.password) {
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, message: 'Invalid credentials' });
+        }
+    } catch (error) {
+        res.json({ success: false, message: 'Login failed' });
+    }
+});
+
 // API: Add menu item
 app.post('/api/ordering/admin/add-menu-item', (req, res) => {
     try {
@@ -813,8 +1016,16 @@ app.get('/api/ordering/admin/employee-credits', (req, res) => {
     }
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server - listen on all interfaces so others on same network can access
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                console.log(`  Access from other devices: http://${net.address}:${PORT}`);
+            }
+        }
+    }
     console.log('Press Ctrl+C to stop the server');
 });
