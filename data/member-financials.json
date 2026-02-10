@@ -1,0 +1,36 @@
+{
+  "3": {
+    "shareCapital": {
+      "total": 0,
+      "shares": 0,
+      "history": []
+    },
+    "savings": {
+      "balance": 1000,
+      "history": [
+        {
+          "type": "deposit",
+          "amount": 1000,
+          "paymentMethod": "Bank Transfer",
+          "date": "2026-02-10T07:03:25.150Z"
+        }
+      ]
+    },
+    "loans": {
+      "currentBalance": 0,
+      "currentLoan": null,
+      "history": [
+        {
+          "loanType": "Regular Loan",
+          "amount": 5000,
+          "term": 6,
+          "purpose": "Billing",
+          "notes": "asdasdasda",
+          "applicationDate": "2026-02-10T07:04:48.151Z",
+          "status": "pending",
+          "monthlyPayment": 862.7418335544053
+        }
+      ]
+    }
+  }
+}

@@ -8,87 +8,490 @@
     <link rel="stylesheet" href="/css/member-dashboard.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <header>
-            <h1>Member Dashboard</h1>
-            <div class="header-actions">
-                <span class="user-info">Welcome, <strong id="memberName"></strong></span>
+            <div class="header-left">
+                <h1>👤 Member Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <span class="member-badge" id="memberBadge">Loading...</span>
                 <button class="btn btn-logout" onclick="logout()">Logout</button>
             </div>
         </header>
 
-        <div class="dashboard-layout">
-            <!-- Sidebar: Profile & Settings -->
-            <aside class="member-sidebar">
-                <div class="profile-card">
-                    <div class="profile-avatar" id="memberAvatar">M</div>
-                    <h2 id="sidebarName">Member Name</h2>
-                    <p class="sidebar-email" id="sidebarEmail">email@example.com</p>
-                    <p class="sidebar-id" id="sidebarMemberId">Member ID: #00001</p>
-                </div>
+        <!-- Pending Verification Notice -->
+        <div id="pendingNotice" class="pending-notice" style="display: none;">
+            <div class="notice-icon">⏳</div>
+            <div class="notice-content">
+                <h2>Application Pending Verification</h2>
+                <p>Your membership application is currently under review by our administrators.</p>
+                <p>You will be notified once your account is verified and activated.</p>
+            </div>
+        </div>
 
-                <div class="settings-card">
-                    <h3>Account Settings</h3>
-                    
-                    <form id="memberProfileForm" class="settings-form">
-                        <h4>Profile Information</h4>
-                        <div class="form-group">
-                            <label for="profileFirstName">First Name</label>
-                            <input type="text" id="profileFirstName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="profileMiddleName">Middle Name</label>
-                            <input type="text" id="profileMiddleName">
-                        </div>
-                        <div class="form-group">
-                            <label for="profileLastName">Last Name</label>
-                            <input type="text" id="profileLastName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="profileMobile">Mobile Number</label>
-                            <input type="tel" id="profileMobile">
-                        </div>
-                        <div class="form-group">
-                            <label for="profileAddress">Address</label>
-                            <textarea id="profileAddress" rows="2"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-save">Save Profile</button>
-                    </form>
-
-                    <form id="memberPasswordForm" class="settings-form">
-                        <h4>Change Password</h4>
-                        <div class="form-group">
-                            <label for="currentPassword">Current Password</label>
-                            <input type="password" id="currentPassword" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" minlength="6" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmNewPassword">Confirm New Password</label>
-                            <input type="password" id="confirmNewPassword" minlength="6" required>
-                        </div>
-                        <button type="submit" class="btn btn-save">Update Password</button>
-                    </form>
-                </div>
-            </aside>
-
-            <!-- Main content: Membership info -->
-            <div class="dashboard-content">
-                <div class="member-card">
-                    <h2>Your Membership Information</h2>
-                    <div class="member-info" id="memberInfo">
-                        <!-- Member info will be loaded here -->
-                    </div>
-                    
-                    <div class="status-section">
-                        <h3>Membership Status</h3>
-                        <div class="status-badge" id="statusBadge">
-                            <!-- Status will be loaded here -->
-                        </div>
+        <!-- Verified Member Content -->
+        <div id="verifiedContent" style="display: none;">
+            <!-- Financial Summary Cards -->
+            <div class="financial-summary">
+                <div class="summary-card share-capital-card" onclick="showSection('shareCapital')">
+                    <div class="card-icon">💰</div>
+                    <div class="card-info">
+                        <h3>Share Capital</h3>
+                        <div class="card-amount" id="shareCapitalAmount">₱0.00</div>
+                        <p class="card-label">Total Shares</p>
                     </div>
                 </div>
+        <!-- Payment Methods Setup Section (Before Main Content) -->
+    <div id="paymentMethodsSetup" class="payment-methods-section" style="display: none;">
+        <div class="setup-banner">
+            <div class="setup-icon">⚠️</div>
+            <div class="setup-content">
+                <h3>Setup Payment Methods Required</h3>
+                <p>Before you can deposit or withdraw funds, please set up your payment methods (e-wallet or bank account).</p>
+                <button class="btn btn-primary" onclick="showPaymentSetupModal()">Setup Payment Methods</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Display (After Setup) -->
+    <div id="paymentMethodsDisplay" class="payment-methods-display" style="display: none;">
+        <div class="methods-header">
+            <h3>💳 Your Payment Methods</h3>
+            <button class="btn btn-secondary" onclick="showPaymentSetupModal()">+ Add Method</button>
+        </div>
+        <div id="paymentMethodsList" class="methods-list">
+            <!-- Payment methods will be loaded here -->
+        </div>
+    </div>   
+                    <div class="summary-card savings-card" onclick="showSection('savings')">
+                    <div class="card-icon">🏦</div>
+                    <div class="card-info">
+                        <h3>Savings</h3>
+                        <div class="card-amount" id="savingsAmount">₱0.00</div>
+                        <p class="card-label">Total Savings</p>
+                    </div>
+                </div>
+
+                <div class="summary-card loan-card" onclick="showSection('loans')">
+                    <div class="card-icon">📋</div>
+                    <div class="card-info">
+                        <h3>Loans</h3>
+                        <div class="card-amount" id="currentLoanAmount">₱0.00</div>
+                        <p class="card-label">Current Loan Balance</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Share Capital Section -->
+                <div id="shareCapitalSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>💰 Share Capital Management</h2>
+                        <button class="btn btn-primary" onclick="showAddShareModal()">+ Add Shares</button>
+                    </div>
+
+                    <div class="balance-display">
+                        <div class="balance-label">Total Share Capital</div>
+                        <div class="balance-amount" id="shareCapitalBalance">₱0.00</div>
+                        <div class="balance-info">Number of Shares: <span id="numberOfShares">0</span></div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Share Capital History</h3>
+                        <div id="shareCapitalHistory" class="transactions-list">
+                            <p class="no-transactions">No share capital transactions yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savings Section -->
+                <div id="savingsSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>🏦 Savings Account</h2>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="showDepositModal()">💵 Deposit</button>
+                            <button class="btn btn-secondary" onclick="showWithdrawModal()">💸 Withdraw</button>
+                        </div>
+                    </div>
+
+                    <div class="balance-display">
+                        <div class="balance-label">Total Savings Balance</div>
+                        <div class="balance-amount" id="savingsBalance">₱0.00</div>
+                        <div class="balance-info">Interest Rate: <span>2.5% per annum</span></div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Savings History</h3>
+                        <div id="savingsHistory" class="transactions-list">
+                            <p class="no-transactions">No savings transactions yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loans Section -->
+                <div id="loansSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>📋 Loan Management</h2>
+                        <button class="btn btn-primary" onclick="showLoanApplicationModal()">📝 Apply for Loan</button>
+                    </div>
+
+                    <div class="loan-status-cards">
+                        <div class="loan-status-card">
+                            <div class="status-label">Current Loan Balance</div>
+                            <div class="status-value" id="loanBalance">₱0.00</div>
+                        </div>
+                        <div class="loan-status-card">
+                            <div class="status-label">Monthly Payment</div>
+                            <div class="status-value" id="monthlyPayment">₱0.00</div>
+                        </div>
+                        <div class="loan-status-card">
+                            <div class="status-label">Loan Status</div>
+                            <div class="status-value" id="loanStatus">No Active Loan</div>
+                        </div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Loan Applications & History</h3>
+                        <div id="loanHistory" class="transactions-list">
+                            <p class="no-transactions">No loan applications yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Welcome/Overview Section (Default) -->
+                <div id="overviewSection" class="content-section">
+                    <div class="welcome-banner">
+                        <h2>Welcome to CLIMBS Member Portal!</h2>
+                        <p>Manage your Share Capital, Savings, and Loans all in one place.</p>
+                    </div>
+
+                    <div class="quick-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon">👤</div>
+                            <div class="stat-info">
+                                <div class="stat-label">Member Since</div>
+                                <div class="stat-value" id="memberSince">-</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-info">
+                                <div class="stat-label">Status</div>
+                                <div class="stat-value verified-status">Verified Member</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions">
+                        <h3>Quick Actions</h3>
+                        <div class="action-grid">
+                            <button class="action-card" onclick="showSection('shareCapital')">
+                                <div class="action-icon">💰</div>
+                                <div class="action-title">Manage Shares</div>
+                            </button>
+                            <button class="action-card" onclick="showSection('savings')">
+                                <div class="action-icon">🏦</div>
+                                <div class="action-title">Savings Account</div>
+                            </button>
+                            <button class="action-card" onclick="showSection('loans')">
+                                <div class="action-icon">📋</div>
+                                <div class="action-title">Loan Services</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Share Modal -->
+    <div id="addShareModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Add Share Capital</h2>
+                <span class="close" onclick="closeAddShareModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addShareForm">
+                    <div class="form-group">
+                        <label>Amount (₱)</label>
+                        <input type="number" id="shareAmount" min="100" step="100" required>
+                        <small>Minimum: ₱100.00 per share</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="sharePaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAddShareModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Payment Method Setup Modal -->
+    <div id="paymentSetupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Setup Payment Methods</h2>
+                <span class="close" onclick="closePaymentSetupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-method-tabs">
+                    <button class="method-tab active" onclick="switchMethodTab('ewallet')">E-Wallet</button>
+                    <button class="method-tab" onclick="switchMethodTab('bank')">Bank Account</button>
+                </div>
+
+                <!-- E-Wallet Form -->
+                <form id="ewalletSetupForm" class="method-setup-form">
+                    <h3>E-Wallet Account</h3>
+                    
+                    <div class="form-group">
+                        <label>E-Wallet Provider *</label>
+                        <select id="ewalletProvider" required>
+                            <option value="">Select Provider</option>
+                            <option value="GCash">GCash</option>
+                            <option value="PayMaya">PayMaya / Maya</option>
+                            <option value="GrabPay">GrabPay</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Registered Mobile Number *</label>
+                        <input type="tel" id="ewalletMobile" placeholder="09XX-XXX-XXXX" pattern="[0-9]{11}" required>
+                        <small>Must match your e-wallet registered number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="ewalletName" required>
+                        <small>As shown in your e-wallet account</small>
+                    </div>
+
+                    <div class="verification-section">
+                        <h4>Verification</h4>
+                        <p>To verify your e-wallet account, we'll send a ₱1.00 test transaction.</p>
+                        <div class="form-group">
+                            <label>Verification Code</label>
+                            <input type="text" id="ewalletVerificationCode" placeholder="Will be sent after submission">
+                            <button type="button" class="btn btn-secondary" onclick="sendEwalletVerification()">Send Verification</button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add E-Wallet</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Bank Account Form -->
+                <form id="bankSetupForm" class="method-setup-form" style="display: none;">
+                    <h3>Bank Account</h3>
+                    
+                    <div class="form-group">
+                        <label>Bank Name *</label>
+                        <select id="bankName" required>
+                            <option value="">Select Bank</option>
+                            <option value="BDO">BDO</option>
+                            <option value="BPI">BPI</option>
+                            <option value="Metrobank">Metrobank</option>
+                            <option value="Unionbank">Unionbank</option>
+                            <option value="Security Bank">Security Bank</option>
+                            <option value="LandBank">LandBank</option>
+                            <option value="PNB">PNB</option>
+                            <option value="Chinabank">Chinabank</option>
+                            <option value="RCBC">RCBC</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Number *</label>
+                        <input type="text" id="bankAccountNumber" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="bankAccountName" required>
+                        <small>Must match your bank account name</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Type *</label>
+                        <select id="bankAccountType" required>
+                            <option value="">Select Type</option>
+                            <option value="Savings">Savings</option>
+                            <option value="Checking">Checking</option>
+                        </select>
+                    </div>
+
+                    <div class="verification-section">
+                        <h4>Verification</h4>
+                        <p>Upload proof of bank account ownership (bank statement or passbook).</p>
+                        <div class="form-group">
+                            <label>Upload Document *</label>
+                            <input type="file" id="bankProofDocument" accept="image/*,.pdf" required>
+                            <small>Accepted: JPG, PNG, PDF (Max 5MB)</small>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Bank Account</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Deposit Modal - UPDATED -->
+    <div id="depositModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Deposit to Savings</h2>
+                <span class="close" onclick="closeDepositModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="depositForm">
+                    <div class="form-group">
+                        <label>Amount (₱) *</label>
+                        <input type="number" id="depositAmount" min="100" step="50" required>
+                        <small>Minimum deposit: ₱100.00</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Payment Method *</label>
+                        <select id="depositPaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                        </select>
+                        <small>Only verified payment methods are shown</small>
+                    </div>
+
+                    <div id="depositInstructions" class="payment-instructions" style="display: none;">
+                        <!-- Instructions will be shown here based on selected method -->
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reference Number *</label>
+                        <input type="text" id="depositReference" placeholder="Transaction/Reference Number" required>
+                        <small>Enter the reference number from your transaction</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Proof of Payment *</label>
+                        <input type="file" id="depositProof" accept="image/*" required>
+                        <small>Upload screenshot of payment confirmation</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Deposit Request</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeDepositModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal - UPDATED -->
+    <div id="withdrawModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Withdraw from Savings</h2>
+                <span class="close" onclick="closeWithdrawModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="withdrawForm">
+                    <div class="form-group">
+                        <label>Amount (₱) *</label>
+                        <input type="number" id="withdrawAmount" min="100" step="50" required>
+                        <small>Available Balance: <span id="availableBalance">₱0.00</span></small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Withdraw To *</label>
+                        <select id="withdrawPaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                        </select>
+                        <small>Funds will be sent to this account</small>
+                    </div>
+
+                    <div id="withdrawDestination" class="payment-destination" style="display: none;">
+                        <!-- Destination account details will be shown here -->
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reason for Withdrawal *</label>
+                        <textarea id="withdrawReason" rows="3" required placeholder="Please state your reason for withdrawal"></textarea>
+                    </div>
+
+                    <div class="withdrawal-notice">
+                        <strong>⚠️ Important:</strong>
+                        <ul>
+                            <li>Withdrawal requests are subject to approval</li>
+                            <li>Processing time: 1-3 business days</li>
+                            <li>Minimum withdrawal: ₱100.00</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Request Withdrawal</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeWithdrawModal()">Cancel</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loan Application Modal -->
+    <div id="loanApplicationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Loan Application</h2>
+                <span class="close" onclick="closeLoanApplicationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="loanApplicationForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loan Type</label>
+                            <select id="loanType" required>
+                                <option value="">Select Loan Type</option>
+                                <option value="Regular Loan">Regular Loan</option>
+                                <option value="Emergency Loan">Emergency Loan</option>
+                                <option value="Education Loan">Education Loan</option>
+                                <option value="Housing Loan">Housing Loan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Loan Amount (₱)</label>
+                            <input type="number" id="loanAmount" min="5000" step="1000" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loan Term (months)</label>
+                            <input type="number" id="loanTerm" min="6" max="60" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Purpose</label>
+                            <input type="text" id="loanPurpose" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Additional Notes</label>
+                        <textarea id="loanNotes" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Application</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeLoanApplicationModal()">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

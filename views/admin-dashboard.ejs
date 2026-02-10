@@ -8,67 +8,210 @@
     <link rel="stylesheet" href="/css/admin-dashboard.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <header>
-            <h1>Admin - Membership Management</h1>
-            <div class="header-actions">
-                <span class="user-info">Admin Panel</span>
+            <div class="header-left">
+                <h1>⚙️ Admin Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <span class="admin-badge">Administrator</span>
                 <button class="btn btn-logout" onclick="logout()">Logout</button>
             </div>
         </header>
 
+        <!-- Navigation Tabs -->
+        <div class="admin-nav">
+            <button class="nav-btn active" onclick="showSection('members')">👥 Members</button>
+            <button class="nav-btn" onclick="showSection('financials')">💰 Financial Overview</button>
+            <button class="nav-btn" onclick="showSection('loans')">📋 Loan Applications</button>
+        </div>
+
         <div class="admin-content">
-            <div class="stats-section">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalMembers">0</div>
-                    <div class="stat-label">Total Members</div>
+            <!-- Members Section -->
+            <div id="membersSection" class="content-section">
+                <div class="stats-section">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="totalMembers">0</div>
+                            <div class="stat-label">Total Members</div>
+                        </div>
+                    </div>
+                    <div class="stat-card pending-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="pendingMembers">0</div>
+                            <div class="stat-label">Pending Verification</div>
+                        </div>
+                    </div>
+                    <div class="stat-card verified-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="verifiedMembers">0</div>
+                            <div class="stat-label">Verified Members</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="pendingMembers">0</div>
-                    <div class="stat-label">Pending Verification</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="verifiedMembers">0</div>
-                    <div class="stat-label">Verified Members</div>
+
+                <div class="members-section">
+                    <div class="section-header">
+                        <h2>All Members</h2>
+                        <div class="filter-section">
+                            <button class="filter-btn active" onclick="filterMembers('all')">All</button>
+                            <button class="filter-btn" onclick="filterMembers('pending')">Pending</button>
+                            <button class="filter-btn" onclick="filterMembers('verified')">Verified</button>
+                        </div>
+                    </div>
+
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Date Registered</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px;">Loading members...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="members-section">
-                <h2>All Members</h2>
-                <div class="filter-section">
-                    <button class="filter-btn active" onclick="filterMembers('all')">All</button>
-                    <button class="filter-btn" onclick="filterMembers('pending')">Pending</button>
-                    <button class="filter-btn" onclick="filterMembers('verified')">Verified</button>
+            <!-- Financial Overview Section -->
+            <div id="financialsSection" class="content-section" style="display: none;">
+                <div class="section-header">
+                    <h2>💰 Member Financial Overview</h2>
+                    <input type="text" id="searchFinancial" placeholder="🔍 Search member..." class="search-input">
                 </div>
 
-                <table class="members-table">
+                <div class="financial-summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-label">Total Share Capital</div>
+                        <div class="summary-value" id="totalShareCapital">₱0.00</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Total Savings</div>
+                        <div class="summary-value" id="totalSavings">₱0.00</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Total Loans Outstanding</div>
+                        <div class="summary-value" id="totalLoans">₱0.00</div>
+                    </div>
+                </div>
+
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Mobile</th>
-                            <th>Date Registered</th>
-                            <th>Status</th>
+                            <th>Member ID</th>
+                            <th>Member Name</th>
+                            <th>Share Capital</th>
+                            <th>Savings Balance</th>
+                            <th>Loan Balance</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="membersTableBody">
-                        <!-- Members will be loaded here -->
+                    <tbody id="financialsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">Loading financial data...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- View Member Modal -->
-            <div id="viewMemberModal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Member Details</h2>
-                        <span class="close" onclick="closeViewMember()">&times;</span>
+            <!-- Loan Applications Section -->
+            <div id="loansSection" class="content-section" style="display: none;">
+                <div class="section-header">
+                    <h2>📋 Loan Applications</h2>
+                    <div class="filter-section">
+                        <button class="filter-btn active" onclick="filterLoans('all')">All</button>
+                        <button class="filter-btn" onclick="filterLoans('pending')">Pending</button>
+                        <button class="filter-btn" onclick="filterLoans('approved')">Approved</button>
+                        <button class="filter-btn" onclick="filterLoans('rejected')">Rejected</button>
                     </div>
-                    <div class="modal-body" id="memberDetailsBody">
-                        <!-- Member details will be loaded here -->
-                    </div>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Loan Type</th>
+                            <th>Amount</th>
+                            <th>Term</th>
+                            <th>Purpose</th>
+                            <th>Application Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loansTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">Loading loan applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- View Member Modal -->
+        <div id="viewMemberModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Member Details</h2>
+                    <span class="close" onclick="closeViewMember()">&times;</span>
+                </div>
+                <div class="modal-body" id="memberDetailsBody">
+                    <!-- Member details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- View Financial Details Modal -->
+        <div id="viewFinancialModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>Financial Details</h2>
+                    <span class="close" onclick="closeFinancialModal()">&times;</span>
+                </div>
+                <div class="modal-body" id="financialDetailsBody">
+                    <!-- Financial details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Approve/Reject Loan Modal -->
+        <div id="loanActionModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2 id="loanActionTitle">Loan Action</h2>
+                    <span class="close" onclick="closeLoanActionModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="loanActionDetails"></div>
+                    <form id="loanActionForm">
+                        <div class="form-group">
+                            <label>Action</label>
+                            <select id="loanAction" required>
+                                <option value="">Select Action</option>
+                                <option value="approve">Approve Loan</option>
+                                <option value="reject">Reject Loan</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="rejectReasonGroup" style="display: none;">
+                            <label>Reason for Rejection</label>
+                            <textarea id="rejectReason" rows="3"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeLoanActionModal()">Cancel</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

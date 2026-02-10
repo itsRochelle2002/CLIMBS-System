@@ -126,7 +126,287 @@ app.post('/api/membership/login', async (req, res) => {
         res.json({ success: false, message: 'Login failed' });
     }
 });
+// ============ MEMBER FINANCIAL MANAGEMENT APIs ============
 
+// Initialize member financial data
+function initializeMemberFinancials() {
+    const financialsFile = './data/member-financials.json';
+    if (!fs.existsSync(financialsFile)) {
+        fs.writeFileSync(financialsFile, JSON.stringify({}, null, 2));
+    }
+}
+
+// Call this in initialization section
+initializeMemberFinancials();
+
+// API: Get member financial data
+app.get('/api/membership/financial-data', (req, res) => {
+    try {
+        const { memberId } = req.query;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = {};
+        if (fs.existsSync(financialsFile)) {
+            const data = fs.readFileSync(financialsFile, 'utf8');
+            if (data.trim()) {
+                financials = JSON.parse(data);
+            }
+        }
+        
+        // Get member's financial data or create default
+        if (!financials[memberId]) {
+            financials[memberId] = {
+                shareCapital: {
+                    total: 0,
+                    shares: 0,
+                    history: []
+                },
+                savings: {
+                    balance: 0,
+                    history: []
+                },
+                loans: {
+                    currentBalance: 0,
+                    currentLoan: null,
+                    history: []
+                }
+            };
+        }
+        
+        res.json({ success: true, data: financials[memberId] });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Add share capital
+app.post('/api/membership/add-share', (req, res) => {
+    try {
+        const { memberId, amount, paymentMethod, date } = req.body;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = {};
+        if (fs.existsSync(financialsFile)) {
+            const data = fs.readFileSync(financialsFile, 'utf8');
+            if (data.trim()) {
+                financials = JSON.parse(data);
+            }
+        }
+        
+        // Initialize if doesn't exist
+        if (!financials[memberId]) {
+            financials[memberId] = {
+                shareCapital: { total: 0, shares: 0, history: [] },
+                savings: { balance: 0, history: [] },
+                loans: { currentBalance: 0, currentLoan: null, history: [] }
+            };
+        }
+        
+        // Add share capital (₱100 per share)
+        const sharePrice = 100;
+        const numberOfShares = Math.floor(amount / sharePrice);
+        
+        financials[memberId].shareCapital.total += amount;
+        financials[memberId].shareCapital.shares += numberOfShares;
+        financials[memberId].shareCapital.history.push({
+            amount: amount,
+            shares: numberOfShares,
+            paymentMethod: paymentMethod,
+            date: date
+        });
+        
+        fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Savings transaction (deposit/withdrawal)
+app.post('/api/membership/savings-transaction', (req, res) => {
+    try {
+        const { memberId, amount, paymentMethod, reason, type, date } = req.body;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = {};
+        if (fs.existsSync(financialsFile)) {
+            const data = fs.readFileSync(financialsFile, 'utf8');
+            if (data.trim()) {
+                financials = JSON.parse(data);
+            }
+        }
+        
+        // Initialize if doesn't exist
+        if (!financials[memberId]) {
+            financials[memberId] = {
+                shareCapital: { total: 0, shares: 0, history: [] },
+                savings: { balance: 0, history: [] },
+                loans: { currentBalance: 0, currentLoan: null, history: [] }
+            };
+        }
+        
+        // Process transaction
+        if (type === 'deposit') {
+            financials[memberId].savings.balance += amount;
+            financials[memberId].savings.history.push({
+                type: 'deposit',
+                amount: amount,
+                paymentMethod: paymentMethod,
+                date: date
+            });
+        } else if (type === 'withdrawal') {
+            // Check if sufficient balance
+            if (financials[memberId].savings.balance < amount) {
+                return res.json({ success: false, error: 'Insufficient balance' });
+            }
+            
+            financials[memberId].savings.balance -= amount;
+            financials[memberId].savings.history.push({
+                type: 'withdrawal',
+                amount: amount,
+                reason: reason,
+                date: date,
+                status: 'pending' // Withdrawal needs approval
+            });
+        }
+        
+        fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Loan application
+app.post('/api/membership/loan-application', (req, res) => {
+    try {
+        const { memberId, loanType, amount, term, purpose, notes, applicationDate, status } = req.body;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = {};
+        if (fs.existsSync(financialsFile)) {
+            const data = fs.readFileSync(financialsFile, 'utf8');
+            if (data.trim()) {
+                financials = JSON.parse(data);
+            }
+        }
+        
+        // Initialize if doesn't exist
+        if (!financials[memberId]) {
+            financials[memberId] = {
+                shareCapital: { total: 0, shares: 0, history: [] },
+                savings: { balance: 0, history: [] },
+                loans: { currentBalance: 0, currentLoan: null, history: [] }
+            };
+        }
+        
+        // Calculate monthly payment (simple calculation, 12% annual interest)
+        const interestRate = 0.12 / 12; // Monthly interest
+        const monthlyPayment = (amount * interestRate * Math.pow(1 + interestRate, term)) / 
+                               (Math.pow(1 + interestRate, term) - 1);
+        
+        // Add loan application
+        const loanApplication = {
+            loanType: loanType,
+            amount: amount,
+            term: term,
+            purpose: purpose,
+            notes: notes,
+            applicationDate: applicationDate,
+            status: status,
+            monthlyPayment: monthlyPayment
+        };
+        
+        financials[memberId].loans.history.push(loanApplication);
+        
+        fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Get all member financials (for admin)
+app.get('/api/membership/all-financials', (req, res) => {
+    try {
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = {};
+        if (fs.existsSync(financialsFile)) {
+            const data = fs.readFileSync(financialsFile, 'utf8');
+            if (data.trim()) {
+                financials = JSON.parse(data);
+            }
+        }
+        
+        res.json({ success: true, financials });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Approve loan (admin)
+app.post('/api/membership/approve-loan', (req, res) => {
+    try {
+        const { memberId, loanIndex } = req.body;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = JSON.parse(fs.readFileSync(financialsFile, 'utf8'));
+        
+        if (financials[memberId] && financials[memberId].loans.history[loanIndex]) {
+            const loan = financials[memberId].loans.history[loanIndex];
+            loan.status = 'approved';
+            loan.approvedDate = new Date().toISOString();
+            
+            // Set as current loan
+            financials[memberId].loans.currentLoan = {
+                ...loan,
+                balance: loan.amount,
+                monthlyPayment: loan.monthlyPayment
+            };
+            financials[memberId].loans.currentBalance = loan.amount;
+            
+            fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, error: 'Loan not found' });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Make loan payment
+app.post('/api/membership/loan-payment', (req, res) => {
+    try {
+        const { memberId, amount, date } = req.body;
+        const financialsFile = './data/member-financials.json';
+        
+        let financials = JSON.parse(fs.readFileSync(financialsFile, 'utf8'));
+        
+        if (financials[memberId] && financials[memberId].loans.currentLoan) {
+            financials[memberId].loans.currentBalance -= amount;
+            financials[memberId].loans.currentLoan.balance -= amount;
+            
+            // If fully paid
+            if (financials[memberId].loans.currentBalance <= 0) {
+                financials[memberId].loans.currentLoan.status = 'completed';
+                financials[memberId].loans.currentLoan = null;
+                financials[memberId].loans.currentBalance = 0;
+            }
+            
+            fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, error: 'No active loan' });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
 // API: Admin Login
 app.post('/api/membership/admin-login', (req, res) => {
     try {
