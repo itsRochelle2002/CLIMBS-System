@@ -19,5 +19,13 @@
     "password": "emp123",
     "walletBalance": 450,
     "creditBalance": 0
+  },
+  {
+    "empId": "EMP004",
+    "name": "Ledy Joy Bandiola",
+    "email": "bandiola@gmail.com",
+    "password": "ledy@EMP004",
+    "walletBalance": 0,
+    "creditBalance": 0
   }
 ]

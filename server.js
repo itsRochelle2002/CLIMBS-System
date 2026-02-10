@@ -3,9 +3,10 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const dataStore = require('./lib/dataStore');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware (higher limit for profile image base64)
 app.use(express.json({ limit: '10mb' }));
@@ -55,10 +56,12 @@ function initializeOrderingOrders() {
     }
 }
 
-// Initialize data on server start
-initializeMenu();
-initializeEmployees();
-initializeOrderingOrders();
+// Initialize data on server start (file-based fallback; db init runs in start())
+if (!process.env.DATABASE_URL) {
+    initializeMenu();
+    initializeEmployees();
+    initializeOrderingOrders();
+}
 
 // ============ ROUTES ============
 
@@ -107,24 +110,13 @@ app.get('/admin-ordering', (req, res) => {
 // ============ MEMBERSHIP APIs ============
 
 // API: Member Login
-app.post('/api/membership/login', (req, res) => {
+app.post('/api/membership/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        
-        const membersFile = './data/members.json';
-        let members = [];
-        
-        if (fs.existsSync(membersFile)) {
-            const data = fs.readFileSync(membersFile, 'utf8');
-            if (data.trim()) {
-                members = JSON.parse(data);
-            }
-        }
-        
+        const members = await dataStore.getMembers();
         const member = members.find(m => m.email === email && m.password === password);
-        
         if (member) {
-            const { password, ...memberData } = member;
+            const { password: _, ...memberData } = member;
             res.json({ success: true, member: memberData });
         } else {
             res.json({ success: false, message: 'Invalid email or password' });
@@ -151,40 +143,21 @@ app.post('/api/membership/admin-login', (req, res) => {
 });
 
 // API: Save membership registration
-app.post('/api/membership/register', (req, res) => {
+app.post('/api/membership/register', async (req, res) => {
     try {
         const memberData = req.body;
-        
         if (!memberData || Object.keys(memberData).length === 0) {
             return res.status(400).json({ success: false, error: 'No data received' });
         }
-        
-        let members = [];
-        const filePath = './data/members.json';
-        
-        if (fs.existsSync(filePath)) {
-            try {
-                const data = fs.readFileSync(filePath, 'utf8');
-                if (data.trim()) {
-                    members = JSON.parse(data);
-                }
-            } catch (parseError) {
-                members = [];
-            }
-        }
-        
-        const emailExists = members.find(m => m.email === memberData.email);
-        if (emailExists) {
+        const members = await dataStore.getMembers();
+        if (members.find(m => m.email === memberData.email)) {
             return res.json({ success: false, error: 'Email already registered' });
         }
-        
-        memberData.id = members.length + 1;
+        memberData.id = members.length ? Math.max(...members.map(m => m.id)) + 1 : 1;
         memberData.registrationDate = new Date().toISOString();
         memberData.status = 'pending';
         members.push(memberData);
-        
-        fs.writeFileSync(filePath, JSON.stringify(members, null, 2));
-        
+        await dataStore.saveMembers(members);
         res.json({ success: true, memberId: memberData.id });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -192,44 +165,67 @@ app.post('/api/membership/register', (req, res) => {
 });
 
 // API: Get all members
-app.get('/api/membership/all-members', (req, res) => {
+app.get('/api/membership/all-members', async (req, res) => {
     try {
-        const membersFile = './data/members.json';
-        let members = [];
-        
-        if (fs.existsSync(membersFile)) {
-            const data = fs.readFileSync(membersFile, 'utf8');
-            if (data.trim()) {
-                members = JSON.parse(data);
-                members = members.map(({ password, ...member }) => member);
-            }
+        const members = await dataStore.getMembers();
+        const list = members.map(({ password, ...member }) => member);
+        res.json({ success: true, members: list });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update member profile (basic info)
+app.post('/api/membership/update-profile', async (req, res) => {
+    try {
+        const { id, firstName, middleName, lastName, mobile, address } = req.body;
+        if (!id) return res.json({ success: false, error: 'Member ID is required' });
+        const members = await dataStore.getMembers();
+        const index = members.findIndex(m => m.id === id);
+        if (index === -1) return res.json({ success: false, error: 'Member not found' });
+        if (typeof firstName === 'string') members[index].firstName = firstName.trim();
+        if (typeof middleName === 'string') members[index].middleName = middleName.trim();
+        if (typeof lastName === 'string') members[index].lastName = lastName.trim();
+        if (typeof mobile === 'string') members[index].mobile = mobile.trim();
+        if (typeof address === 'string') {
+            members[index].address = address.trim();
+            members[index].presentAddress = address.trim();
         }
-        
-        res.json({ success: true, members });
+        await dataStore.saveMembers(members);
+        const { password, ...memberData } = members[index];
+        res.json({ success: true, member: memberData });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update member password
+app.post('/api/membership/update-password', async (req, res) => {
+    try {
+        const { id, currentPassword, newPassword } = req.body;
+        if (!id || !currentPassword || !newPassword) return res.json({ success: false, error: 'All fields are required' });
+        const members = await dataStore.getMembers();
+        const index = members.findIndex(m => m.id === id);
+        if (index === -1) return res.json({ success: false, error: 'Member not found' });
+        if (members[index].password !== currentPassword) return res.json({ success: false, error: 'Current password is incorrect' });
+        members[index].password = newPassword;
+        await dataStore.saveMembers(members);
+        res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
 // API: Verify member
-app.post('/api/membership/verify', (req, res) => {
+app.post('/api/membership/verify', async (req, res) => {
     try {
         const { memberId } = req.body;
-        const membersFile = './data/members.json';
-        
-        let members = [];
-        if (fs.existsSync(membersFile)) {
-            const data = fs.readFileSync(membersFile, 'utf8');
-            if (data.trim()) {
-                members = JSON.parse(data);
-            }
-        }
-        
-        const memberIndex = members.findIndex(m => m.id === memberId);
-        if (memberIndex !== -1) {
-            members[memberIndex].status = 'verified';
-            members[memberIndex].verifiedDate = new Date().toISOString();
-            fs.writeFileSync(membersFile, JSON.stringify(members, null, 2));
+        const members = await dataStore.getMembers();
+        const i = members.findIndex(m => m.id === memberId);
+        if (i !== -1) {
+            members[i].status = 'verified';
+            members[i].verifiedDate = new Date().toISOString();
+            await dataStore.saveMembers(members);
             res.json({ success: true });
         } else {
             res.json({ success: false, error: 'Member not found' });
@@ -242,22 +238,13 @@ app.post('/api/membership/verify', (req, res) => {
 // ============ ORDERING SYSTEM APIs ============
 
 // API: Employee Login
-app.post('/api/ordering/employee-login', (req, res) => {
+app.post('/api/ordering/employee-login', async (req, res) => {
     try {
         const { empId, password } = req.body;
-        
-        const empFile = './data/employees.json';
-        let employees = [];
-        
-        if (fs.existsSync(empFile)) {
-            const data = fs.readFileSync(empFile, 'utf8');
-            employees = JSON.parse(data);
-        }
-        
+        const employees = await dataStore.getEmployees();
         const employee = employees.find(e => e.empId === empId && e.password === password);
-        
         if (employee) {
-            const { password, ...empData } = employee;
+            const { password: _, ...empData } = employee;
             res.json({ success: true, employee: empData });
         } else {
             res.json({ success: false, message: 'Invalid employee ID or password' });
@@ -268,38 +255,16 @@ app.post('/api/ordering/employee-login', (req, res) => {
 });
 
 // API: Employee Registration
-app.post('/api/ordering/employee-register', (req, res) => {
+app.post('/api/ordering/employee-register', async (req, res) => {
     try {
         const employeeData = req.body;
-        
-        if (!employeeData || !employeeData.empId) {
-            return res.status(400).json({ success: false, message: 'No data received' });
-        }
-        
-        const empFile = './data/employees.json';
-        let employees = [];
-        
-        if (fs.existsSync(empFile)) {
-            const data = fs.readFileSync(empFile, 'utf8');
-            employees = JSON.parse(data);
-        }
-        
+        if (!employeeData || !employeeData.empId) return res.status(400).json({ success: false, message: 'No data received' });
+        const employees = await dataStore.getEmployees();
         // Check if employee ID already exists
-        const empExists = employees.find(e => e.empId === employeeData.empId);
-        if (empExists) {
-            return res.json({ success: false, message: 'Employee ID already registered' });
-        }
-        
-        // Check if email already exists
-        const emailExists = employees.find(e => e.email === employeeData.email);
-        if (emailExists) {
-            return res.json({ success: false, message: 'Email already registered' });
-        }
-        
-        // Add new employee
+        if (employees.find(e => e.empId === employeeData.empId)) return res.json({ success: false, message: 'Employee ID already registered' });
+        if (employeeData.email && employees.find(e => e.email === employeeData.email)) return res.json({ success: false, message: 'Email already registered' });
         employees.push(employeeData);
-        fs.writeFileSync(empFile, JSON.stringify(employees, null, 2));
-        
+        await dataStore.saveEmployees(employees);
         res.json({ success: true, message: 'Registration successful' });
     } catch (error) {
         console.error('Registration error:', error);
@@ -328,18 +293,9 @@ app.post('/api/ordering/admin-login', (req, res) => {
 });
 
 // API: Get menu items
-app.get('/api/ordering/menu-items', (req, res) => {
+app.get('/api/ordering/menu-items', async (req, res) => {
     try {
-        const menuFile = './data/menu.json';
-        let items = [];
-        
-        if (fs.existsSync(menuFile)) {
-            const data = fs.readFileSync(menuFile, 'utf8');
-            if (data.trim()) {
-                items = JSON.parse(data);
-            }
-        }
-        
+        const items = await dataStore.getMenu();
         res.json({ success: true, items });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -347,117 +303,64 @@ app.get('/api/ordering/menu-items', (req, res) => {
 });
 
 // API: Get wallet balance
-app.get('/api/ordering/wallet-balance', (req, res) => {
+app.get('/api/ordering/wallet-balance', async (req, res) => {
     try {
         const { empId } = req.query;
-        
-        const empFile = './data/employees.json';
-        let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-        
+        const employees = await dataStore.getEmployees();
         const employee = employees.find(e => e.empId === empId);
-        
-        if (employee) {
-            res.json({ success: true, balance: employee.walletBalance || 0 });
-        } else {
-            res.json({ success: false, error: 'Employee not found' });
-        }
+        if (employee) res.json({ success: true, balance: employee.walletBalance || 0 });
+        else res.json({ success: false, error: 'Employee not found' });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
 // API: Top up wallet
-app.post('/api/ordering/top-up-wallet', (req, res) => {
+app.post('/api/ordering/top-up-wallet', async (req, res) => {
     try {
         const { empId, amount } = req.body;
-        
-        const empFile = './data/employees.json';
-        let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-        
-        const empIndex = employees.findIndex(e => e.empId === empId);
-        
-        if (empIndex !== -1) {
-            employees[empIndex].walletBalance = (employees[empIndex].walletBalance || 0) + amount;
-            fs.writeFileSync(empFile, JSON.stringify(employees, null, 2));
-            res.json({ success: true, newBalance: employees[empIndex].walletBalance });
-        } else {
-            res.json({ success: false, error: 'Employee not found' });
-        }
+        const employees = await dataStore.getEmployees();
+        const i = employees.findIndex(e => e.empId === empId);
+        if (i !== -1) {
+            employees[i].walletBalance = (employees[i].walletBalance || 0) + amount;
+            await dataStore.saveEmployees(employees);
+            res.json({ success: true, newBalance: employees[i].walletBalance });
+        } else res.json({ success: false, error: 'Employee not found' });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
 // API: Place order
-app.post('/api/ordering/place-order', (req, res) => {
+app.post('/api/ordering/place-order', async (req, res) => {
     try {
         const orderData = req.body;
-        
-        if (!orderData || !orderData.items || orderData.items.length === 0) {
-            return res.status(400).json({ success: false, error: 'No items in order' });
-        }
-        
-        // Read orders
-        let orders = [];
-        const ordersFile = './data/ordering-orders.json';
-        
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
-        // Add order ID
-        orderData.id = orders.length + 1;
-        
-        // Update stock
-        const menuFile = './data/menu.json';
-        let menuItems = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        
+        if (!orderData || !orderData.items || orderData.items.length === 0) return res.status(400).json({ success: false, error: 'No items in order' });
+        const orderId = await dataStore.addOrder(orderData);
+        orderData.id = orderId;
+        let menuItems = await dataStore.getMenu();
         orderData.items.forEach(orderItem => {
-            const menuItemIndex = menuItems.findIndex(m => m.id === orderItem.id);
-            if (menuItemIndex !== -1) {
-                menuItems[menuItemIndex].stock = (menuItems[menuItemIndex].stock || 0) - orderItem.quantity;
-            }
+            const idx = menuItems.findIndex(m => m.id === orderItem.id);
+            if (idx !== -1) menuItems[idx].stock = (menuItems[idx].stock || 0) - orderItem.quantity;
         });
-        
-        fs.writeFileSync(menuFile, JSON.stringify(menuItems, null, 2));
-        
-        // Handle payment
+        await dataStore.saveMenu(menuItems);
         let newBalance = 0;
+        const employees = await dataStore.getEmployees();
         if (orderData.paymentMethod === 'wallet' && orderData.empId) {
-            // Deduct from wallet
-            const empFile = './data/employees.json';
-            let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-            
-            const empIndex = employees.findIndex(e => e.empId === orderData.empId);
-            if (empIndex !== -1) {
-                employees[empIndex].walletBalance -= orderData.total;
-                newBalance = employees[empIndex].walletBalance;
-                fs.writeFileSync(empFile, JSON.stringify(employees, null, 2));
+            const i = employees.findIndex(e => e.empId === orderData.empId);
+            if (i !== -1) {
+                employees[i].walletBalance -= orderData.total;
+                newBalance = employees[i].walletBalance;
+                await dataStore.saveEmployees(employees);
             }
         } else if (orderData.paymentMethod === 'credit' && orderData.empId) {
-            // Add to credit
-            const empFile = './data/employees.json';
-            let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-            
-            const empIndex = employees.findIndex(e => e.empId === orderData.empId);
-            if (empIndex !== -1) {
-                employees[empIndex].creditBalance = (employees[empIndex].creditBalance || 0) + orderData.total;
-                fs.writeFileSync(empFile, JSON.stringify(employees, null, 2));
+            const i = employees.findIndex(e => e.empId === orderData.empId);
+            if (i !== -1) {
+                employees[i].creditBalance = (employees[i].creditBalance || 0) + orderData.total;
+                await dataStore.saveEmployees(employees);
             }
         }
-        
-        // Save order
-        orders.push(orderData);
-        fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2));
-        
-        res.json({ 
-            success: true, 
-            orderId: orderData.id,
-            newBalance: newBalance
-        });
+        res.json({ success: true, orderId, newBalance });
     } catch (error) {
         console.error('Error placing order:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -465,22 +368,11 @@ app.post('/api/ordering/place-order', (req, res) => {
 });
 
 // API: Get order history
-app.get('/api/ordering/order-history', (req, res) => {
+app.get('/api/ordering/order-history', async (req, res) => {
     try {
         const { empId } = req.query;
-        
-        const ordersFile = './data/ordering-orders.json';
-        let orders = [];
-        
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
+        const orders = await dataStore.getOrders();
         const employeeOrders = orders.filter(o => o.empId === empId);
-        
         res.json({ success: true, orders: employeeOrders });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -498,39 +390,16 @@ app.get('/api/ordering/favorites', (req, res) => {
 });
 
 // API: Get credit balance
-app.get('/api/ordering/credit-balance', (req, res) => {
+app.get('/api/ordering/credit-balance', async (req, res) => {
     try {
         const { empId } = req.query;
-        
-        const empFile = './data/employees.json';
-        let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-        
+        const employees = await dataStore.getEmployees();
         const employee = employees.find(e => e.empId === empId);
-        
         if (employee) {
-            // Get credit history
-            const ordersFile = './data/ordering-orders.json';
-            let orders = [];
-            
-            if (fs.existsSync(ordersFile)) {
-                const data = fs.readFileSync(ordersFile, 'utf8');
-                if (data.trim()) {
-                    orders = JSON.parse(data);
-                }
-            }
-            
+            const orders = await dataStore.getOrders();
             const creditOrders = orders.filter(o => o.empId === empId && o.paymentMethod === 'credit');
-            const creditHistory = creditOrders.map(o => ({
-                orderId: o.id,
-                amount: o.total,
-                date: o.orderDate
-            }));
-            
-            res.json({ 
-                success: true, 
-                creditBalance: employee.creditBalance || 0,
-                creditHistory: creditHistory
-            });
+            const creditHistory = creditOrders.map(o => ({ orderId: o.id, amount: o.total, date: o.orderDate }));
+            res.json({ success: true, creditBalance: employee.creditBalance || 0, creditHistory });
         } else {
             res.json({ success: false, error: 'Employee not found' });
         }
@@ -542,55 +411,25 @@ app.get('/api/ordering/credit-balance', (req, res) => {
 // ============ ADMIN ORDERING APIs ============
 
 // API: Admin Overview
-app.get('/api/ordering/admin/overview', (req, res) => {
+app.get('/api/ordering/admin/overview', async (req, res) => {
     try {
-        const ordersFile = './data/ordering-orders.json';
-        const menuFile = './data/menu.json';
-        const empFile = './data/employees.json';
-        
-        let orders = [];
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
-        let menuItems = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-        
-        // Today's orders and sales
+        const [orders, menuItems, employees] = await Promise.all([dataStore.getOrders(), dataStore.getMenu(), dataStore.getEmployees()]);
         const today = new Date().toDateString();
         const todayOrders = orders.filter(o => new Date(o.orderDate).toDateString() === today);
         const todaySales = todayOrders.reduce((sum, o) => sum + o.total, 0);
-        
-        // Low stock items
         const lowStockItems = menuItems.filter(item => (item.stock || 0) <= (item.minStock || 5)).length;
-        
-        // Total credits
         const totalCredits = employees.reduce((sum, e) => sum + (e.creditBalance || 0), 0);
-        
-        // Recent orders
         const recentOrders = orders.slice(-10).reverse();
-        
-        res.json({
-            success: true,
-            todaySales,
-            todayOrders: todayOrders.length,
-            lowStockItems,
-            totalCredits,
-            recentOrders
-        });
+        res.json({ success: true, todaySales, todayOrders: todayOrders.length, lowStockItems, totalCredits, recentOrders });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
-// Initialize admin profile
-function initializeAdminProfile() {
+if (!process.env.DATABASE_URL) {
     const adminProfileFile = './data/admin-profile.json';
     if (!fs.existsSync(adminProfileFile)) {
-        const defaultProfile = {
+        fs.writeFileSync(adminProfileFile, JSON.stringify({
             fullName: 'Administrator',
             email: 'admin@climbs.com',
             phone: '',
@@ -599,13 +438,9 @@ function initializeAdminProfile() {
             password: 'admin123',
             profileImage: '',
             accountCreated: new Date().toISOString()
-        };
-        fs.writeFileSync(adminProfileFile, JSON.stringify(defaultProfile, null, 2));
+        }, null, 2));
     }
 }
-
-// Call this in initialization section
-initializeAdminProfile();
 
 // Add route for admin profile page
 app.get('/admin-profile', (req, res) => {
@@ -613,19 +448,10 @@ app.get('/admin-profile', (req, res) => {
 });
 
 // API: Get admin profile
-app.get('/api/ordering/admin/profile', (req, res) => {
+app.get('/api/ordering/admin/profile', async (req, res) => {
     try {
-        const profileFile = './data/admin-profile.json';
-        let profile = {};
-        
-        if (fs.existsSync(profileFile)) {
-            const data = fs.readFileSync(profileFile, 'utf8');
-            profile = JSON.parse(data);
-        }
-        
-        // Don't send password to client
+        const profile = await dataStore.getAdminProfile();
         const { password, ...profileData } = profile;
-        
         res.json({ success: true, profile: profileData });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -633,49 +459,28 @@ app.get('/api/ordering/admin/profile', (req, res) => {
 });
 
 // API: Update admin profile
-app.post('/api/ordering/admin/update-profile', (req, res) => {
+app.post('/api/ordering/admin/update-profile', async (req, res) => {
     try {
         const { fullName, email, phone, address } = req.body;
-        const profileFile = './data/admin-profile.json';
-        
-        let profile = {};
-        if (fs.existsSync(profileFile)) {
-            const data = fs.readFileSync(profileFile, 'utf8');
-            profile = JSON.parse(data);
-        }
-        
-        // Update profile
-        profile.fullName = fullName;
-        profile.email = email;
-        profile.phone = phone;
-        profile.address = address;
-        
-        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2));
-        
+        const profile = await dataStore.getAdminProfile();
+        if (fullName != null) profile.fullName = fullName;
+        if (email != null) profile.email = email;
+        if (phone != null) profile.phone = phone;
+        if (address != null) profile.address = address;
+        await dataStore.saveAdminProfile(profile);
         res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
-// API: Update profile image (accepts base64; body limit 10mb in middleware)
-app.post('/api/ordering/admin/update-profile-image', (req, res) => {
+// API: Update profile image
+app.post('/api/ordering/admin/update-profile-image', async (req, res) => {
     try {
         const profileImage = req.body && req.body.profileImage;
-        const profileFile = './data/admin-profile.json';
-        
-        let profile = {};
-        if (fs.existsSync(profileFile)) {
-            const data = fs.readFileSync(profileFile, 'utf8');
-            profile = JSON.parse(data);
-        }
-        
-        // Only update if we got a string (empty string = remove image)
-        if (typeof profileImage === 'string') {
-            profile.profileImage = profileImage;
-        }
-        
-        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2), 'utf8');
+        const profile = await dataStore.getAdminProfile();
+        if (typeof profileImage === 'string') profile.profileImage = profileImage;
+        await dataStore.saveAdminProfile(profile);
         res.json({ success: true });
     } catch (error) {
         console.error('Update profile image error:', error);
@@ -684,32 +489,14 @@ app.post('/api/ordering/admin/update-profile-image', (req, res) => {
 });
 
 // API: Update security (username/password)
-app.post('/api/ordering/admin/update-security', (req, res) => {
+app.post('/api/ordering/admin/update-security', async (req, res) => {
     try {
         const { username, currentPassword, newPassword } = req.body;
-        const profileFile = './data/admin-profile.json';
-        
-        let profile = {};
-        if (fs.existsSync(profileFile)) {
-            const data = fs.readFileSync(profileFile, 'utf8');
-            profile = JSON.parse(data);
-        }
-        
-        // Verify current password
-        if (profile.password !== currentPassword) {
-            return res.json({ success: false, error: 'Current password is incorrect' });
-        }
-        
-        // Update username
+        const profile = await dataStore.getAdminProfile();
+        if (profile.password !== currentPassword) return res.json({ success: false, error: 'Current password is incorrect' });
         profile.username = username;
-        
-        // Update password if provided
-        if (newPassword) {
-            profile.password = newPassword;
-        }
-        
-        fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2));
-        
+        if (newPassword) profile.password = newPassword;
+        await dataStore.saveAdminProfile(profile);
         res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -717,42 +504,25 @@ app.post('/api/ordering/admin/update-security', (req, res) => {
 });
 
 // Update admin login API to use profile data
-app.post('/api/ordering/admin-login', (req, res) => {
+app.post('/api/ordering/admin-login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const profileFile = './data/admin-profile.json';
-        
-        let adminCredentials = { username: 'admin', password: 'admin123' };
-        
-        if (fs.existsSync(profileFile)) {
-            const data = fs.readFileSync(profileFile, 'utf8');
-            const profile = JSON.parse(data);
-            adminCredentials = {
-                username: profile.username || 'admin',
-                password: profile.password || 'admin123'
-            };
-        }
-        
-        if (username === adminCredentials.username && password === adminCredentials.password) {
-            res.json({ success: true });
-        } else {
-            res.json({ success: false, message: 'Invalid credentials' });
-        }
+        const profile = await dataStore.getAdminProfile();
+        const adminUsername = profile.username || 'admin';
+        const adminPassword = profile.password || 'admin123';
+        if (username === adminUsername && password === adminPassword) res.json({ success: true });
+        else res.json({ success: false, message: 'Invalid credentials' });
     } catch (error) {
         res.json({ success: false, message: 'Login failed' });
     }
 });
 
 // API: Add menu item
-app.post('/api/ordering/admin/add-menu-item', (req, res) => {
+app.post('/api/ordering/admin/add-menu-item', async (req, res) => {
     try {
-        const newItem = req.body;
-        const menuFile = './data/menu.json';
-        
-        let items = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        items.push(newItem);
-        
-        fs.writeFileSync(menuFile, JSON.stringify(items, null, 2));
+        const items = await dataStore.getMenu();
+        items.push(req.body);
+        await dataStore.saveMenu(items);
         res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -760,36 +530,23 @@ app.post('/api/ordering/admin/add-menu-item', (req, res) => {
 });
 
 // API: Update menu item
-app.post('/api/ordering/admin/update-menu-item', (req, res) => {
+app.post('/api/ordering/admin/update-menu-item', async (req, res) => {
     try {
-        const updatedItem = req.body;
-        const menuFile = './data/menu.json';
-        
-        let items = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        const index = items.findIndex(item => item.id === updatedItem.id);
-        
-        if (index !== -1) {
-            items[index] = updatedItem;
-            fs.writeFileSync(menuFile, JSON.stringify(items, null, 2));
-            res.json({ success: true });
-        } else {
-            res.json({ success: false, error: 'Item not found' });
-        }
+        const items = await dataStore.getMenu();
+        const i = items.findIndex(item => item.id === req.body.id);
+        if (i !== -1) { items[i] = req.body; await dataStore.saveMenu(items); res.json({ success: true }); }
+        else res.json({ success: false, error: 'Item not found' });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
 // API: Delete menu item
-app.post('/api/ordering/admin/delete-menu-item', (req, res) => {
+app.post('/api/ordering/admin/delete-menu-item', async (req, res) => {
     try {
-        const { id } = req.body;
-        const menuFile = './data/menu.json';
-        
-        let items = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        items = items.filter(item => item.id !== id);
-        
-        fs.writeFileSync(menuFile, JSON.stringify(items, null, 2));
+        const items = await dataStore.getMenu();
+        const filtered = items.filter(item => item.id !== req.body.id);
+        await dataStore.saveMenu(filtered);
         res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -797,41 +554,25 @@ app.post('/api/ordering/admin/delete-menu-item', (req, res) => {
 });
 
 // API: Update stock
-app.post('/api/ordering/admin/update-stock', (req, res) => {
+app.post('/api/ordering/admin/update-stock', async (req, res) => {
     try {
-        const { itemId, addQty } = req.body;
-        const menuFile = './data/menu.json';
-        
-        let items = JSON.parse(fs.readFileSync(menuFile, 'utf8'));
-        const index = items.findIndex(item => item.id === itemId);
-        
-        if (index !== -1) {
-            items[index].stock = (items[index].stock || 0) + addQty;
-            fs.writeFileSync(menuFile, JSON.stringify(items, null, 2));
+        const items = await dataStore.getMenu();
+        const i = items.findIndex(item => item.id === req.body.itemId);
+        if (i !== -1) {
+            items[i].stock = (items[i].stock || 0) + req.body.addQty;
+            await dataStore.saveMenu(items);
             res.json({ success: true });
-        } else {
-            res.json({ success: false, error: 'Item not found' });
-        }
+        } else res.json({ success: false, error: 'Item not found' });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
 // API: Get all orders
-app.get('/api/ordering/admin/all-orders', (req, res) => {
+app.get('/api/ordering/admin/all-orders', async (req, res) => {
     try {
-        const ordersFile = './data/ordering-orders.json';
-        let orders = [];
-        
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
-        orders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
-        
+        const orders = await dataStore.getOrders();
+        orders.sort((a, b) => new Date(b.orderDate || 0) - new Date(a.orderDate || 0));
         res.json({ success: true, orders });
     } catch (error) {
         res.json({ success: false, error: error.message });
@@ -839,19 +580,10 @@ app.get('/api/ordering/admin/all-orders', (req, res) => {
 });
 
 // API: Daily report
-app.get('/api/ordering/admin/daily-report', (req, res) => {
+app.get('/api/ordering/admin/daily-report', async (req, res) => {
     try {
         const { date } = req.query;
-        const ordersFile = './data/ordering-orders.json';
-        
-        let orders = [];
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
+        const orders = await dataStore.getOrders();
         const targetDate = new Date(date).toDateString();
         const dayOrders = orders.filter(o => new Date(o.orderDate).toDateString() === targetDate);
         
@@ -888,19 +620,10 @@ app.get('/api/ordering/admin/daily-report', (req, res) => {
 });
 
 // API: Monthly report
-app.get('/api/ordering/admin/monthly-report', (req, res) => {
+app.get('/api/ordering/admin/monthly-report', async (req, res) => {
     try {
         const { month, year } = req.query;
-        const ordersFile = './data/ordering-orders.json';
-        
-        let orders = [];
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
+        const orders = await dataStore.getOrders();
         const monthOrders = orders.filter(o => {
             const orderDate = new Date(o.orderDate);
             return orderDate.getMonth() + 1 === parseInt(month) && orderDate.getFullYear() === parseInt(year);
@@ -935,19 +658,10 @@ app.get('/api/ordering/admin/monthly-report', (req, res) => {
 });
 
 // API: Yearly report
-app.get('/api/ordering/admin/yearly-report', (req, res) => {
+app.get('/api/ordering/admin/yearly-report', async (req, res) => {
     try {
         const { year } = req.query;
-        const ordersFile = './data/ordering-orders.json';
-        
-        let orders = [];
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
+        const orders = await dataStore.getOrders();
         const yearOrders = orders.filter(o => new Date(o.orderDate).getFullYear() === parseInt(year));
         
         const totalOrders = yearOrders.length;
@@ -980,21 +694,9 @@ app.get('/api/ordering/admin/yearly-report', (req, res) => {
 });
 
 // API: Employee credits
-app.get('/api/ordering/admin/employee-credits', (req, res) => {
+app.get('/api/ordering/admin/employee-credits', async (req, res) => {
     try {
-        const empFile = './data/employees.json';
-        const ordersFile = './data/ordering-orders.json';
-        
-        let employees = JSON.parse(fs.readFileSync(empFile, 'utf8'));
-        
-        let orders = [];
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            if (data.trim()) {
-                orders = JSON.parse(data);
-            }
-        }
-        
+        const [employees, orders] = await Promise.all([dataStore.getEmployees(), dataStore.getOrders()]);
         const credits = employees
             .filter(e => (e.creditBalance || 0) > 0)
             .map(e => {
@@ -1016,16 +718,21 @@ app.get('/api/ordering/admin/employee-credits', (req, res) => {
     }
 });
 
-// Start server - listen on all interfaces so others on same network can access
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    const nets = os.networkInterfaces();
-    for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                console.log(`  Access from other devices: http://${net.address}:${PORT}`);
+// Start server (init DB or files first, then listen)
+async function start() {
+    await dataStore.init();
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+        if (dataStore.useDb) console.log('Using PostgreSQL database (DATABASE_URL)');
+        const nets = os.networkInterfaces();
+        for (const name of Object.keys(nets)) {
+            for (const net of nets[name]) {
+                if (net.family === 'IPv4' && !net.internal) {
+                    console.log(`  Access from other devices: http://${net.address}:${PORT}`);
+                }
             }
         }
-    }
-    console.log('Press Ctrl+C to stop the server');
-});
+        console.log('Press Ctrl+C to stop the server');
+    });
+}
+start().catch(err => { console.error('Failed to start:', err); process.exit(1); });

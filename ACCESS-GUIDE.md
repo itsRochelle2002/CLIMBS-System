@@ -77,3 +77,53 @@ From here, people choose: **Membership** or **Ordering System**.
    - Pwede na sila mo-order, mag-login as employee/admin, or mag-visitor — **dili na nila kailangan ang code**.
 
 **Note:** Kung ang server naa sa lain nga computer sa network, gamita ang **IP address** nga gi-print sa server (e.g. `http://192.168.1.10:3000`). Ang PC nga nag-run sa server kinahanglan **naka-on** ug **same WiFi/LAN** sa mga tao nga mo-access.
+
+---
+
+## Unsaon pag-open sa TANAN (bisag asa, walay code setup)
+
+Kung gusto nimo nga **bisag kinsa** (dili lang same WiFi) maka-open — phone sa gawas, uban nga office, etc. — naa duha ka practical options. **Dili na nila kailangan i-program o i-setup ang code;** sila ra mo-open ug link sa browser.
+
+### Option 1: Same WiFi / Same building (no extra setup)
+
+- Sa PC nga naa ang project: **i-run** `node server.js`
+- Sa terminal makita: **Access from other devices: http://192.168.x.x:3000**
+- **I-share** nimo ang maong link (e.g. `http://192.168.1.5:3000`) sa uban
+- Sila: **open lang sa browser** — walay install, walay code. Same WiFi ra kinahanglan.
+
+### Option 2: Internet (bisag asa na device) — gamit **ngrok**
+
+Kini para **temporary** public link (e.g. for demo o testing). Walay code change; one-time install ra sa ngrok sa imong PC.
+
+1. **Download ngrok:** https://ngrok.com/download (create free account, then download)
+2. **I-run ang imong server:** `node server.js`
+3. **Sa lain terminal:** `ngrok http 3000`
+4. Makita nimo ang **public URL** (e.g. `https://abc123.ngrok.io`)
+5. **I-share** nimo ang link sa bisag kinsa — sila ra mo-open sa browser. **Dili na nila kailangan i-program o i-setup ang code.**
+
+**Tip:** Sa free ngrok, ang URL mausab kada restart. Kung need nimo same URL always, naa paid plan o pwede ka mo-**deploy** (Option 3).
+
+### Option 3: Internet permanently — **i-deploy** (e.g. Render)
+
+Kung gusto nimo **permanent link** nga naa sa internet (e.g. `https://climbs-system.onrender.com`) — **one-time deploy** ra. Human ato, **tanan maka-access** pinaagi sa link; **dili na nila kailangan i-program o i-setup ang code.**
+
+1. **Create account:** https://render.com (free)
+2. **New Web Service** → connect imong **GitHub** repo (or upload code)
+3. **Build command:** `npm install`
+4. **Start command:** `node server.js`
+5. **Deploy** → after a few minutes, makakuha ka ug URL (e.g. `https://your-app.onrender.com`)
+6. **I-share** nimo ang URL — bisag kinsa, bisag asa, **open lang sa browser.** Walay code setup sa ilang side.
+
+**Note:** Sa free tier, ang server ma-sleep kung walay gamit; first open might take ~30 seconds. Kung need nimo always-on, naa paid plans or other hosts (Railway, Fly.io, etc.).
+
+---
+
+### Summary
+
+| Gusto nimo                     | Unsaon                                                                 |
+|-------------------------------|------------------------------------------------------------------------|
+| Same WiFi / same building     | Run `node server.js` → share **http://192.168.x.x:3000**              |
+| Internet, temporary (demo)    | Run server + **ngrok http 3000** → share ngrok link                   |
+| Internet, permanent           | **Deploy** sa Render (or similar) → share app URL                    |
+
+Sa tanang cases, **ang mga tao nga mo-access:** open lang nila ang link sa browser — **dili na need nga i-program o i-set up nila ang code.**
