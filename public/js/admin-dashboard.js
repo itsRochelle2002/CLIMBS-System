@@ -27,11 +27,12 @@ async function loadMembers() {
 function displayMembers(filter) {
     currentFilter = filter;
     
-    // Update filter buttons
+    // Update filter buttons (safe when called from loadMembers - no event)
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
+        const btnFilter = btn.textContent.trim().toLowerCase();
+        if (btnFilter === filter.toLowerCase()) btn.classList.add('active');
     });
-    event.target.classList.add('active');
     
     const tbody = document.getElementById('membersTableBody');
     tbody.innerHTML = '';
@@ -86,13 +87,6 @@ function updateStats() {
 // Filter members
 function filterMembers(filter) {
     currentFilter = filter;
-    
-    // Update active button
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-    
     displayMembers(filter);
 }
 
@@ -112,7 +106,7 @@ function viewMember(memberId) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">Full Name</div>
-                <div class="detail-value">${member.firstName} ${member.middleName} ${member.lastName}</div>
+                <div class="detail-value">${[member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ')}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Email</div>
@@ -120,39 +114,39 @@ function viewMember(memberId) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">Mobile</div>
-                <div class="detail-value">${member.mobile}</div>
+                <div class="detail-value">${member.mobile || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Date of Birth</div>
-                <div class="detail-value">${new Date(member.birthdate).toLocaleDateString()}</div>
+                <div class="detail-value">${member.birthdate ? new Date(member.birthdate).toLocaleDateString() : '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Gender</div>
-                <div class="detail-value">${member.gender}</div>
+                <div class="detail-value">${member.gender || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Civil Status</div>
-                <div class="detail-value">${member.civilStatus}</div>
+                <div class="detail-value">${member.civilStatus || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Address</div>
-                <div class="detail-value">${member.address}</div>
+                <div class="detail-value">${member.address || member.presentAddress || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Beneficiary Name</div>
-                <div class="detail-value">${member.beneficiaryName}</div>
+                <div class="detail-value">${member.beneficiaryName || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Relationship</div>
-                <div class="detail-value">${member.relationship}</div>
+                <div class="detail-value">${member.relationship || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Share Amount</div>
-                <div class="detail-value">₱${parseFloat(member.shareAmount).toFixed(2)}</div>
+                <div class="detail-value">${member.shareAmount != null ? '₱' + parseFloat(member.shareAmount).toFixed(2) : '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Payment Mode</div>
-                <div class="detail-value">${member.paymentMode}</div>
+                <div class="detail-value">${member.paymentMode || '—'}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">Registration Date</div>
