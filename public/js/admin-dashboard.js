@@ -6,8 +6,11 @@ if (!isAdmin) {
 
 let allMembers = [];
 let allFinancials = {};
+let allPaymentMethods = {}; // { memberId: [ methods ] }
 let currentFilter = 'all';
 let currentLoanFilter = 'all';
+let currentPaymentMethodFilter = 'all';
+let currentViewPaymentMethod = null; // { memberId, method } for modal verify/reject
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -50,6 +53,9 @@ function showSection(section) {
     if (section === 'members') {
         document.getElementById('membersSection').style.display = 'block';
         loadMembers();
+    } else if (section === 'paymentMethods') {
+        document.getElementById('paymentMethodsSection').style.display = 'block';
+        loadPaymentMethods();
     } else if (section === 'financials') {
         document.getElementById('financialsSection').style.display = 'block';
         loadFinancialOverview();
@@ -118,6 +124,186 @@ function updateStats(members) {
     document.getElementById('totalMembers').textContent = total;
     document.getElementById('pendingMembers').textContent = pending;
     document.getElementById('verifiedMembers').textContent = verified;
+}
+
+// --- Payment Methods (admin) ---
+async function loadPaymentMethods() {
+    try {
+        const [pmResponse, membersResponse] = await Promise.all([
+            fetch('/api/membership/all-payment-methods'),
+            fetch('/api/membership/all-members')
+        ]);
+        const pmResult = await pmResponse.json();
+        const membersResult = await membersResponse.json();
+        if (pmResult.success && membersResult.success) {
+            allPaymentMethods = pmResult.paymentMethods || {};
+            if (membersResult.members && membersResult.members.length) allMembers = membersResult.members;
+            displayPaymentMethods(allPaymentMethods, membersResult.members);
+        }
+    } catch (error) {
+        console.error('Error loading payment methods:', error);
+        document.getElementById('paymentMethodsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">Error loading payment methods</td></tr>';
+    }
+}
+
+function displayPaymentMethods(pmData, members) {
+    const tbody = document.getElementById('paymentMethodsTableBody');
+    tbody.innerHTML = '';
+    let pendingCount = 0, verifiedCount = 0;
+    const rows = [];
+    Object.keys(pmData).forEach(memberId => {
+        const methods = pmData[memberId] || [];
+        const member = members.find(m => String(m.id) === String(memberId));
+        const memberName = member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() || `#${memberId}` : `#${memberId}`;
+        methods.forEach(method => {
+            if (method.status === 'pending') pendingCount++;
+            else if (method.status === 'verified') verifiedCount++;
+            if (currentPaymentMethodFilter !== 'all' && method.status !== currentPaymentMethodFilter) return;
+            const details = method.type === 'ewallet' ? `${method.provider} - ${method.mobile || '-'}` : `${method.bankName || '-'} - ${method.accountNumber || '-'}`;
+            const dateAdded = method.addedAt ? new Date(method.addedAt).toLocaleDateString() : '-';
+            const statusClass = method.status === 'verified' ? 'status-verified' : method.status === 'pending' ? 'status-pending' : 'status-rejected';
+            rows.push({ memberId, memberName, method, details, dateAdded, statusClass });
+        });
+    });
+    document.getElementById('pendingPaymentMethods').textContent = pendingCount;
+    document.getElementById('verifiedPaymentMethods').textContent = verifiedCount;
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No payment methods match filter</td></tr>';
+        return;
+    }
+    rows.forEach(({ memberId, memberName, method, details, dateAdded, statusClass }) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${memberName}</td>
+            <td>${method.type === 'ewallet' ? '📱 E-Wallet' : '🏦 Bank'}</td>
+            <td>${details}</td>
+            <td>${dateAdded}</td>
+            <td><span class="status-badge ${statusClass}">${method.status}</span></td>
+            <td>
+                <button class="btn btn-view" onclick="viewPaymentMethodModal(${memberId}, '${method.id}')">View</button>
+                ${method.status === 'pending' ? `<button class="btn btn-success" onclick="confirmVerifyPaymentMethodFromTable(${memberId}, '${method.id}')">Verify</button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filterPaymentMethods(status) {
+    currentPaymentMethodFilter = status;
+    document.querySelectorAll('#paymentMethodsSection .filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    const members = allMembers.length ? allMembers : [];
+    if (!allMembers.length) {
+        fetch('/api/membership/all-members').then(r => r.json()).then(result => {
+            if (result.success) displayPaymentMethods(allPaymentMethods, result.members);
+        });
+    } else {
+        displayPaymentMethods(allPaymentMethods, allMembers);
+    }
+}
+
+async function viewPaymentMethodModal(memberId, methodId) {
+    const res = await fetch(`/api/membership/payment-methods?memberId=${memberId}`);
+    const result = await res.json();
+    if (!result.success || !result.methods) {
+        alert('Could not load payment method');
+        return;
+    }
+    const method = result.methods.find(m => m.id === methodId);
+    if (!method) {
+        alert('Payment method not found');
+        return;
+    }
+    currentViewPaymentMethod = { memberId, method };
+    const member = allMembers.find(m => m.id === parseInt(memberId, 10));
+    const memberName = member ? `${member.firstName} ${member.lastName}` : `#${memberId}`;
+    let detailsHtml = `
+        <div class="member-detail-grid">
+            <div class="detail-item"><div class="detail-label">Member</div><div class="detail-value">${memberName}</div></div>
+            <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value">${method.type === 'ewallet' ? 'E-Wallet' : 'Bank Account'}</div></div>
+    `;
+    if (method.type === 'ewallet') {
+        detailsHtml += `
+            <div class="detail-item"><div class="detail-label">Provider</div><div class="detail-value">${method.provider || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Mobile</div><div class="detail-value">${method.mobile || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Account Name</div><div class="detail-value">${method.accountName || '-'}</div></div>
+        `;
+    } else {
+        detailsHtml += `
+            <div class="detail-item"><div class="detail-label">Bank</div><div class="detail-value">${method.bankName || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Account Number</div><div class="detail-value">${method.accountNumber || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Account Name</div><div class="detail-value">${method.accountName || '-'}</div></div>
+        `;
+    }
+    detailsHtml += `<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge status-${method.status}">${method.status}</span></div></div>`;
+    detailsHtml += `<div class="detail-item"><div class="detail-label">Date Added</div><div class="detail-value">${method.addedAt ? new Date(method.addedAt).toLocaleString() : '-'}</div></div></div>`;
+    if (method.proof && method.proof.startsWith('data:')) {
+        detailsHtml += `<h4 style="margin-top:20px;">Proof of account</h4><img src="${method.proof}" alt="Proof" style="max-width:100%; max-height:400px; border-radius:8px; border:1px solid #ddd;">`;
+    }
+    document.getElementById('paymentMethodDetailsBody').innerHTML = detailsHtml;
+    document.getElementById('paymentMethodActions').style.display = method.status === 'pending' ? 'flex' : 'none';
+    if (document.getElementById('paymentMethodActions').style.display === 'flex') {
+        document.getElementById('paymentMethodActions').style.gap = '10px';
+        document.getElementById('paymentMethodActions').style.flexWrap = 'wrap';
+    }
+    document.getElementById('viewPaymentMethodModal').style.display = 'block';
+}
+
+function closePaymentMethodModal() {
+    document.getElementById('viewPaymentMethodModal').style.display = 'none';
+    currentViewPaymentMethod = null;
+}
+
+async function confirmVerifyPaymentMethod() {
+    if (!currentViewPaymentMethod || !confirm('Verify this payment method?')) return;
+    await updatePaymentMethodStatus(currentViewPaymentMethod.memberId, currentViewPaymentMethod.method.id, 'verified');
+}
+
+async function confirmRejectPaymentMethod() {
+    if (!currentViewPaymentMethod || !confirm('Reject this payment method? Member will need to submit again.')) return;
+    await updatePaymentMethodStatus(currentViewPaymentMethod.memberId, currentViewPaymentMethod.method.id, 'rejected');
+}
+
+function confirmVerifyPaymentMethodFromTable(memberId, methodId) {
+    if (!confirm('Verify this payment method?')) return;
+    updatePaymentMethodStatus(memberId, methodId, 'verified');
+}
+
+async function updatePaymentMethodStatus(memberId, methodId, status) {
+    try {
+        const response = await fetch('/api/membership/payment-method-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memberId: String(memberId), methodId, status })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('Payment method ' + status + ' successfully.');
+            closePaymentMethodModal();
+            loadPaymentMethods();
+            if (document.getElementById('viewMemberModal').style.display === 'block') {
+                const el = document.getElementById('memberDetailPaymentMethods');
+                if (el) fetch(`/api/membership/payment-methods?memberId=${memberId}`).then(r => r.json()).then(res => {
+                    if (res.success && res.methods && res.methods.length > 0) {
+                        el.innerHTML = res.methods.map(m => {
+                            const statusClass = m.status === 'verified' ? 'status-verified' : m.status === 'pending' ? 'status-pending' : 'status-rejected';
+                            const details = m.type === 'ewallet' ? `${m.provider} - ${m.mobile}` : `${m.bankName} - ${m.accountNumber}`;
+                            return `<div style="margin:8px 0; padding:10px; background:#f8f9ff; border-radius:8px;">
+                                <strong>${m.type === 'ewallet' ? '📱 E-Wallet' : '🏦 Bank'}</strong> ${details}<br>
+                                <span class="status-badge ${statusClass}">${m.status}</span>
+                                ${m.status === 'pending' ? `<button class="btn btn-success btn-sm" style="margin-left:8px;" onclick="viewPaymentMethodModal(${memberId}, '${m.id}')">Review</button>` : ''}
+                            </div>`;
+                        }).join('');
+                    }
+                });
+            }
+        } else {
+            alert('Error: ' + (result.error || 'Failed to update'));
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error updating payment method');
+    }
 }
 
 // Filter members
@@ -205,6 +391,10 @@ function viewMember(memberId) {
                 <div class="detail-value">${new Date(member.verifiedDate).toLocaleString()}</div>
             </div>
             ` : ''}
+            <div class="detail-item" style="grid-column: 1 / -1;">
+                <div class="detail-label">💳 Payment Methods</div>
+                <div class="detail-value" id="memberDetailPaymentMethods">Loading...</div>
+            </div>
         </div>
         
         ${member.status === 'pending' ? `
@@ -216,6 +406,27 @@ function viewMember(memberId) {
     `;
     
     document.getElementById('viewMemberModal').style.display = 'block';
+    
+    // Load this member's payment methods
+    fetch(`/api/membership/payment-methods?memberId=${member.id}`)
+        .then(r => r.json())
+        .then(result => {
+            const el = document.getElementById('memberDetailPaymentMethods');
+            if (result.success && result.methods && result.methods.length > 0) {
+                el.innerHTML = result.methods.map(m => {
+                    const statusClass = m.status === 'verified' ? 'status-verified' : m.status === 'pending' ? 'status-pending' : 'status-rejected';
+                    const details = m.type === 'ewallet' ? `${m.provider} - ${m.mobile}` : `${m.bankName} - ${m.accountNumber}`;
+                    return `<div style="margin:8px 0; padding:10px; background:#f8f9ff; border-radius:8px;">
+                        <strong>${m.type === 'ewallet' ? '📱 E-Wallet' : '🏦 Bank'}</strong> ${details}<br>
+                        <span class="status-badge ${statusClass}">${m.status}</span>
+                        ${m.status === 'pending' ? `<button class="btn btn-success btn-sm" style="margin-left:8px;" onclick="viewPaymentMethodModal(${member.id}, '${m.id}')">Review</button>` : ''}
+                    </div>`;
+                }).join('');
+            } else {
+                el.innerHTML = '<em>No payment methods added</em>';
+            }
+        })
+        .catch(() => { document.getElementById('memberDetailPaymentMethods').innerHTML = '<em>Error loading</em>'; });
 }
 
 // Close view member modal
@@ -584,16 +795,21 @@ async function handleLoanAction(e) {
         
         if (!confirm('Reject this loan application?')) return;
         
-        // Update loan status to rejected
         try {
-            const financialsFile = allFinancials;
-            financialsFile[memberId].loans.history[loanIndex].status = 'rejected';
-            financialsFile[memberId].loans.history[loanIndex].rejectionReason = reason;
-            
-            // You would normally send this to the server, but for now we'll just update locally
-            alert('Loan rejected');
-            closeLoanActionModal();
-            loadLoanApplications();
+            const response = await fetch('/api/membership/reject-loan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId, loanIndex, reason })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Loan rejected.');
+                closeLoanActionModal();
+                loadLoanApplications();
+                allFinancials = (await fetch('/api/membership/all-financials').then(r => r.json())).financials || allFinancials;
+            } else {
+                alert('Error: ' + (result.error || 'Failed to reject loan'));
+            }
         } catch (error) {
             console.error('Error:', error);
             alert('Error rejecting loan');
@@ -606,6 +822,7 @@ window.onclick = function(event) {
     const modals = [
         document.getElementById('viewMemberModal'),
         document.getElementById('viewFinancialModal'),
+        document.getElementById('viewPaymentMethodModal'),
         document.getElementById('loanActionModal')
     ];
     

@@ -11,7 +11,7 @@
     <div class="container-fluid">
         <header>
             <div class="header-left">
-                <h1>👤 Member Dashboard</h1>
+                <h1 style="cursor:pointer" onclick="showSection('overview')" title="Back to overview">👤 Member Dashboard</h1>
             </div>
             <div class="header-right">
                 <span class="member-badge" id="memberBadge">Loading...</span>
@@ -31,6 +31,29 @@
 
         <!-- Verified Member Content -->
         <div id="verifiedContent" style="display: none;">
+            <!-- Payment Methods Setup Section -->
+            <div id="paymentMethodsSetup" class="payment-methods-section" style="display: none;">
+                <div class="setup-banner">
+                    <div class="setup-icon">⚠️</div>
+                    <div class="setup-content">
+                        <h3>Setup Payment Methods Required</h3>
+                        <p>To deposit or withdraw funds, you must first add and verify your payment method (e-wallet or bank account).</p>
+                        <button class="btn btn-primary" onclick="showPaymentSetupModal()">+ Add Payment Method</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods Display -->
+            <div id="paymentMethodsDisplay" class="payment-methods-display" style="display: none;">
+                <div class="methods-header">
+                    <h3>💳 Your Payment Methods</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="showPaymentSetupModal()">+ Add New</button>
+                </div>
+                <div id="paymentMethodsList" class="methods-list">
+                    <!-- Will be loaded dynamically -->
+                </div>
+            </div>
+
             <!-- Financial Summary Cards -->
             <div class="financial-summary">
                 <div class="summary-card share-capital-card" onclick="showSection('shareCapital')">
@@ -41,29 +64,8 @@
                         <p class="card-label">Total Shares</p>
                     </div>
                 </div>
-        <!-- Payment Methods Setup Section (Before Main Content) -->
-    <div id="paymentMethodsSetup" class="payment-methods-section" style="display: none;">
-        <div class="setup-banner">
-            <div class="setup-icon">⚠️</div>
-            <div class="setup-content">
-                <h3>Setup Payment Methods Required</h3>
-                <p>Before you can deposit or withdraw funds, please set up your payment methods (e-wallet or bank account).</p>
-                <button class="btn btn-primary" onclick="showPaymentSetupModal()">Setup Payment Methods</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Payment Methods Display (After Setup) -->
-    <div id="paymentMethodsDisplay" class="payment-methods-display" style="display: none;">
-        <div class="methods-header">
-            <h3>💳 Your Payment Methods</h3>
-            <button class="btn btn-secondary" onclick="showPaymentSetupModal()">+ Add Method</button>
-        </div>
-        <div id="paymentMethodsList" class="methods-list">
-            <!-- Payment methods will be loaded here -->
-        </div>
-    </div>   
-                    <div class="summary-card savings-card" onclick="showSection('savings')">
+                <div class="summary-card savings-card" onclick="showSection('savings')">
                     <div class="card-icon">🏦</div>
                     <div class="card-info">
                         <h3>Savings</h3>
@@ -205,6 +207,218 @@
         </div>
     </div>
 
+    <!-- Payment Method Setup Modal -->
+    <div id="paymentSetupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Payment Method</h2>
+                <span class="close" onclick="closePaymentSetupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-method-tabs">
+                    <button class="method-tab active" onclick="switchMethodTab('ewallet')">📱 E-Wallet</button>
+                    <button class="method-tab" onclick="switchMethodTab('bank')">🏦 Bank Account</button>
+                </div>
+
+                <!-- E-Wallet Form -->
+                <form id="ewalletSetupForm" class="method-setup-form">
+                    <div class="form-group">
+                        <label>E-Wallet Provider *</label>
+                        <select id="ewalletProvider" required>
+                            <option value="">Select Provider</option>
+                            <option value="GCash">GCash</option>
+                            <option value="PayMaya">PayMaya / Maya</option>
+                            <option value="GrabPay">GrabPay</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Registered Mobile Number *</label>
+                        <input type="tel" id="ewalletMobile" placeholder="09XXXXXXXXX" maxlength="11" required>
+                        <small>Must match your e-wallet registered number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="ewalletName" required>
+                        <small>Full name as registered in e-wallet</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload Screenshot of E-Wallet Profile *</label>
+                        <input type="file" id="ewalletProof" accept="image/*" required>
+                        <small>Show your name and mobile number (Max 5MB)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit for Verification</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Bank Account Form -->
+                <form id="bankSetupForm" class="method-setup-form" style="display: none;">
+                    <div class="form-group">
+                        <label>Bank Name *</label>
+                        <select id="bankName" required>
+                            <option value="">Select Bank</option>
+                            <option value="BDO">BDO</option>
+                            <option value="BPI">BPI</option>
+                            <option value="Metrobank">Metrobank</option>
+                            <option value="Unionbank">Unionbank</option>
+                            <option value="Security Bank">Security Bank</option>
+                            <option value="LandBank">LandBank</option>
+                            <option value="PNB">PNB</option>
+                            <option value="RCBC">RCBC</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Number *</label>
+                        <input type="text" id="bankAccountNumber" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="bankAccountName" required>
+                        <small>Must exactly match your bank account</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload Bank Statement or Passbook *</label>
+                        <input type="file" id="bankProof" accept="image/*,.pdf" required>
+                        <small>Show account name and number (Max 5MB)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit for Verification</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit Modal -->
+    <div id="depositModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Deposit to Savings</h2>
+                <span class="close" onclick="closeDepositModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="deposit-instructions">
+                    <h4>📋 Deposit Instructions:</h4>
+                    <ol>
+                        <li>Send money to CLIMBS account using your verified payment method</li>
+                        <li>Enter the transaction amount and reference number below</li>
+                        <li>Upload proof of payment (screenshot)</li>
+                        <li>Wait for admin verification (1-2 business days)</li>
+                    </ol>
+                </div>
+
+                <div class="climbs-account-details">
+                    <h4>💰 CLIMBS Account Details:</h4>
+                    <div class="account-detail">
+                        <strong>GCash:</strong> 0994-155-6747 (CLIMBS COOP)
+                    </div>
+                    <div class="account-detail">
+                        <strong>BDO:</strong> XXXX-XXXX-XXXX (CLIMBS LIFE & GENERAL INSURANCE COOP)
+                    </div>
+                </div>
+
+                <form id="depositForm">
+                    <div class="form-group">
+                        <label>Your Payment Method *</label>
+                        <select id="depositPaymentMethod" required>
+                            <option value="">Select your verified payment method</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Deposit Amount (₱) *</label>
+                        <input type="number" id="depositAmount" min="100" step="50" required>
+                        <small>Minimum: ₱100.00</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Transaction Reference Number *</label>
+                        <input type="text" id="depositReference" placeholder="e.g., GCash Ref: 1234567890" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload Proof of Payment *</label>
+                        <input type="file" id="depositProof" accept="image/*" required>
+                        <small>Screenshot showing: Amount, Date, Reference Number (Max 5MB)</small>
+                    </div>
+
+                    <div class="verification-notice">
+                        ⏳ <strong>Note:</strong> Your deposit will be credited after admin verification (1-2 business days)
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Deposit Request</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeDepositModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Withdraw from Savings</h2>
+                <span class="close" onclick="closeWithdrawModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="withdrawal-notice-important">
+                    <h4>⚠️ Important Withdrawal Information:</h4>
+                    <ul>
+                        <li>Funds will be sent to your verified payment method</li>
+                        <li>Processing time: 2-3 business days after approval</li>
+                        <li>Minimum withdrawal: ₱100.00</li>
+                        <li>Subject to admin approval</li>
+                    </ul>
+                </div>
+
+                <form id="withdrawForm">
+                    <div class="form-group">
+                        <label>Available Balance</label>
+                        <div class="balance-highlight" id="withdrawAvailableBalance">₱0.00</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Withdrawal Amount (₱) *</label>
+                        <input type="number" id="withdrawAmount" min="100" step="50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Withdraw To *</label>
+                        <select id="withdrawPaymentMethod" required>
+                            <option value="">Select destination account</option>
+                        </select>
+                    </div>
+
+                    <div id="withdrawDestination" class="selected-method-display" style="display: none;">
+                        <!-- Will show selected payment method details -->
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reason for Withdrawal *</label>
+                        <textarea id="withdrawReason" rows="3" required placeholder="e.g., Medical expenses, Emergency, etc."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Withdrawal Request</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeWithdrawModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Share Modal -->
     <div id="addShareModal" class="modal">
         <div class="modal-content modal-small">
@@ -233,217 +447,6 @@
                         <button type="button" class="btn btn-secondary" onclick="closeAddShareModal()">Cancel</button>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-    <!-- Payment Method Setup Modal -->
-    <div id="paymentSetupModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Setup Payment Methods</h2>
-                <span class="close" onclick="closePaymentSetupModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="payment-method-tabs">
-                    <button class="method-tab active" onclick="switchMethodTab('ewallet')">E-Wallet</button>
-                    <button class="method-tab" onclick="switchMethodTab('bank')">Bank Account</button>
-                </div>
-
-                <!-- E-Wallet Form -->
-                <form id="ewalletSetupForm" class="method-setup-form">
-                    <h3>E-Wallet Account</h3>
-                    
-                    <div class="form-group">
-                        <label>E-Wallet Provider *</label>
-                        <select id="ewalletProvider" required>
-                            <option value="">Select Provider</option>
-                            <option value="GCash">GCash</option>
-                            <option value="PayMaya">PayMaya / Maya</option>
-                            <option value="GrabPay">GrabPay</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Registered Mobile Number *</label>
-                        <input type="tel" id="ewalletMobile" placeholder="09XX-XXX-XXXX" pattern="[0-9]{11}" required>
-                        <small>Must match your e-wallet registered number</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Account Name *</label>
-                        <input type="text" id="ewalletName" required>
-                        <small>As shown in your e-wallet account</small>
-                    </div>
-
-                    <div class="verification-section">
-                        <h4>Verification</h4>
-                        <p>To verify your e-wallet account, we'll send a ₱1.00 test transaction.</p>
-                        <div class="form-group">
-                            <label>Verification Code</label>
-                            <input type="text" id="ewalletVerificationCode" placeholder="Will be sent after submission">
-                            <button type="button" class="btn btn-secondary" onclick="sendEwalletVerification()">Send Verification</button>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Add E-Wallet</button>
-                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
-                    </div>
-                </form>
-
-                <!-- Bank Account Form -->
-                <form id="bankSetupForm" class="method-setup-form" style="display: none;">
-                    <h3>Bank Account</h3>
-                    
-                    <div class="form-group">
-                        <label>Bank Name *</label>
-                        <select id="bankName" required>
-                            <option value="">Select Bank</option>
-                            <option value="BDO">BDO</option>
-                            <option value="BPI">BPI</option>
-                            <option value="Metrobank">Metrobank</option>
-                            <option value="Unionbank">Unionbank</option>
-                            <option value="Security Bank">Security Bank</option>
-                            <option value="LandBank">LandBank</option>
-                            <option value="PNB">PNB</option>
-                            <option value="Chinabank">Chinabank</option>
-                            <option value="RCBC">RCBC</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Account Number *</label>
-                        <input type="text" id="bankAccountNumber" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Account Name *</label>
-                        <input type="text" id="bankAccountName" required>
-                        <small>Must match your bank account name</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Account Type *</label>
-                        <select id="bankAccountType" required>
-                            <option value="">Select Type</option>
-                            <option value="Savings">Savings</option>
-                            <option value="Checking">Checking</option>
-                        </select>
-                    </div>
-
-                    <div class="verification-section">
-                        <h4>Verification</h4>
-                        <p>Upload proof of bank account ownership (bank statement or passbook).</p>
-                        <div class="form-group">
-                            <label>Upload Document *</label>
-                            <input type="file" id="bankProofDocument" accept="image/*,.pdf" required>
-                            <small>Accepted: JPG, PNG, PDF (Max 5MB)</small>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Add Bank Account</button>
-                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- Deposit Modal - UPDATED -->
-    <div id="depositModal" class="modal">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>Deposit to Savings</h2>
-                <span class="close" onclick="closeDepositModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="depositForm">
-                    <div class="form-group">
-                        <label>Amount (₱) *</label>
-                        <input type="number" id="depositAmount" min="100" step="50" required>
-                        <small>Minimum deposit: ₱100.00</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Payment Method *</label>
-                        <select id="depositPaymentMethod" required>
-                            <option value="">Select Payment Method</option>
-                        </select>
-                        <small>Only verified payment methods are shown</small>
-                    </div>
-
-                    <div id="depositInstructions" class="payment-instructions" style="display: none;">
-                        <!-- Instructions will be shown here based on selected method -->
-                    </div>
-
-                    <div class="form-group">
-                        <label>Reference Number *</label>
-                        <input type="text" id="depositReference" placeholder="Transaction/Reference Number" required>
-                        <small>Enter the reference number from your transaction</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Proof of Payment *</label>
-                        <input type="file" id="depositProof" accept="image/*" required>
-                        <small>Upload screenshot of payment confirmation</small>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Submit Deposit Request</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeDepositModal()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Withdraw Modal - UPDATED -->
-    <div id="withdrawModal" class="modal">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>Withdraw from Savings</h2>
-                <span class="close" onclick="closeWithdrawModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="withdrawForm">
-                    <div class="form-group">
-                        <label>Amount (₱) *</label>
-                        <input type="number" id="withdrawAmount" min="100" step="50" required>
-                        <small>Available Balance: <span id="availableBalance">₱0.00</span></small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Withdraw To *</label>
-                        <select id="withdrawPaymentMethod" required>
-                            <option value="">Select Payment Method</option>
-                        </select>
-                        <small>Funds will be sent to this account</small>
-                    </div>
-
-                    <div id="withdrawDestination" class="payment-destination" style="display: none;">
-                        <!-- Destination account details will be shown here -->
-                    </div>
-
-                    <div class="form-group">
-                        <label>Reason for Withdrawal *</label>
-                        <textarea id="withdrawReason" rows="3" required placeholder="Please state your reason for withdrawal"></textarea>
-                    </div>
-
-                    <div class="withdrawal-notice">
-                        <strong>⚠️ Important:</strong>
-                        <ul>
-                            <li>Withdrawal requests are subject to approval</li>
-                            <li>Processing time: 1-3 business days</li>
-                            <li>Minimum withdrawal: ₱100.00</li>
-                        </ul>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Request Withdrawal</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeWithdrawModal()">Cancel</button>
-                    </div>
-                </form>
-
             </div>
         </div>
     </div>

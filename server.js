@@ -226,7 +226,7 @@ app.post('/api/membership/add-share', (req, res) => {
 // API: Savings transaction (deposit/withdrawal)
 app.post('/api/membership/savings-transaction', (req, res) => {
     try {
-        const { memberId, amount, paymentMethod, reason, type, date } = req.body;
+        const { memberId, amount, paymentMethod, reason, reference, type, date } = req.body;
         const financialsFile = './data/member-financials.json';
         
         let financials = {};
@@ -253,6 +253,7 @@ app.post('/api/membership/savings-transaction', (req, res) => {
                 type: 'deposit',
                 amount: amount,
                 paymentMethod: paymentMethod,
+                reference: reference || '',
                 date: date
             });
         } else if (type === 'withdrawal') {
@@ -266,6 +267,7 @@ app.post('/api/membership/savings-transaction', (req, res) => {
                 type: 'withdrawal',
                 amount: amount,
                 reason: reason,
+                paymentMethod: paymentMethod || '',
                 date: date,
                 status: 'pending' // Withdrawal needs approval
             });
@@ -329,6 +331,102 @@ app.post('/api/membership/loan-application', (req, res) => {
     }
 });
 
+// API: Get member payment methods
+app.get('/api/membership/payment-methods', (req, res) => {
+    try {
+        const { memberId } = req.query;
+        const file = './data/member-payment-methods.json';
+        let data = {};
+        if (fs.existsSync(file)) {
+            const raw = fs.readFileSync(file, 'utf8');
+            if (raw.trim()) data = JSON.parse(raw);
+        }
+        const methods = data[memberId] || [];
+        res.json({ success: true, methods });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Add member payment method
+app.post('/api/membership/payment-methods', (req, res) => {
+    try {
+        const { memberId, type, ...details } = req.body;
+        if (!memberId || !type) {
+            return res.status(400).json({ success: false, error: 'memberId and type are required' });
+        }
+        const file = './data/member-payment-methods.json';
+        let data = {};
+        if (fs.existsSync(file)) {
+            const raw = fs.readFileSync(file, 'utf8');
+            if (raw.trim()) data = JSON.parse(raw);
+        }
+        if (!data[memberId]) data[memberId] = [];
+        const status = details.status || 'pending';
+        const id = 'pm_' + Date.now();
+        data[memberId].push({
+            id,
+            type,
+            ...details,
+            status,
+            verified: status === 'verified',
+            addedAt: new Date().toISOString()
+        });
+        if (!fs.existsSync('./data')) fs.mkdirSync('./data');
+        fs.writeFileSync(file, JSON.stringify(data, null, 2));
+        res.json({ success: true, id });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Get all payment methods (for admin)
+app.get('/api/membership/all-payment-methods', (req, res) => {
+    try {
+        const file = './data/member-payment-methods.json';
+        let data = {};
+        if (fs.existsSync(file)) {
+            const raw = fs.readFileSync(file, 'utf8');
+            if (raw.trim()) data = JSON.parse(raw);
+        }
+        res.json({ success: true, paymentMethods: data });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Update payment method status (admin verify/reject)
+app.post('/api/membership/payment-method-status', (req, res) => {
+    try {
+        const { memberId, methodId, status } = req.body;
+        if (!memberId || !methodId || !['verified', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, error: 'memberId, methodId and status (verified|rejected) required' });
+        }
+        const file = './data/member-payment-methods.json';
+        let data = {};
+        if (fs.existsSync(file)) {
+            const raw = fs.readFileSync(file, 'utf8');
+            if (raw.trim()) data = JSON.parse(raw);
+        }
+        const methods = data[memberId];
+        if (!methods || !Array.isArray(methods)) {
+            return res.json({ success: false, error: 'Member or payment methods not found' });
+        }
+        const method = methods.find(m => m.id === methodId);
+        if (!method) {
+            return res.json({ success: false, error: 'Payment method not found' });
+        }
+        method.status = status;
+        method.verified = status === 'verified';
+        if (status === 'rejected') method.rejectedAt = new Date().toISOString();
+        if (status === 'verified') method.verifiedAt = new Date().toISOString();
+        fs.writeFileSync(file, JSON.stringify(data, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
 // API: Get all member financials (for admin)
 app.get('/api/membership/all-financials', (req, res) => {
     try {
@@ -369,6 +467,30 @@ app.post('/api/membership/approve-loan', (req, res) => {
             };
             financials[memberId].loans.currentBalance = loan.amount;
             
+            fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, error: 'Loan not found' });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// API: Reject loan (admin)
+app.post('/api/membership/reject-loan', (req, res) => {
+    try {
+        const { memberId, loanIndex, reason } = req.body;
+        const financialsFile = './data/member-financials.json';
+        if (!fs.existsSync(financialsFile)) {
+            return res.json({ success: false, error: 'Financials not found' });
+        }
+        const financials = JSON.parse(fs.readFileSync(financialsFile, 'utf8'));
+        if (financials[memberId] && financials[memberId].loans.history[loanIndex]) {
+            const loan = financials[memberId].loans.history[loanIndex];
+            loan.status = 'rejected';
+            loan.rejectedDate = new Date().toISOString();
+            loan.rejectionReason = reason || '';
             fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
             res.json({ success: true });
         } else {

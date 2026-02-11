@@ -1,4 +1,54 @@
 {
+  "1": {
+    "shareCapital": {
+      "total": 0,
+      "shares": 0,
+      "history": []
+    },
+    "savings": {
+      "balance": 0,
+      "history": [
+        {
+          "type": "deposit",
+          "amount": 100,
+          "paymentMethod": "GCash - 09941556747",
+          "reference": "5465465415456",
+          "date": "2026-02-10T11:26:00.668Z"
+        },
+        {
+          "type": "deposit",
+          "amount": 1000,
+          "paymentMethod": "GCash - 09941556747",
+          "reference": "fsdfsdfsd",
+          "date": "2026-02-10T11:29:14.496Z"
+        },
+        {
+          "type": "withdrawal",
+          "amount": 1100,
+          "reason": "dasdsds",
+          "paymentMethod": "GCash - 09941556747",
+          "date": "2026-02-10T11:33:33.803Z",
+          "status": "pending"
+        }
+      ]
+    },
+    "loans": {
+      "currentBalance": 0,
+      "currentLoan": null,
+      "history": [
+        {
+          "loanType": "Emergency Loan",
+          "amount": 10000,
+          "term": 6,
+          "purpose": "Billing",
+          "notes": "Payment for electricity bills.",
+          "applicationDate": "2026-02-10T11:35:36.531Z",
+          "status": "pending",
+          "monthlyPayment": 1725.4836671088106
+        }
+      ]
+    }
+  },
   "3": {
     "shareCapital": {
       "total": 0,
@@ -31,6 +81,29 @@
           "monthlyPayment": 862.7418335544053
         }
       ]
+    }
+  },
+  "5": {
+    "shareCapital": {
+      "total": 0,
+      "shares": 0,
+      "history": []
+    },
+    "savings": {
+      "balance": 100,
+      "history": [
+        {
+          "type": "deposit",
+          "amount": 100,
+          "reference": "1256454515",
+          "date": "2026-02-11T02:36:29.745Z"
+        }
+      ]
+    },
+    "loans": {
+      "currentBalance": 0,
+      "currentLoan": null,
+      "history": []
     }
   }
 }

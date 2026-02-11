@@ -22,6 +22,7 @@
         <!-- Navigation Tabs -->
         <div class="admin-nav">
             <button class="nav-btn active" onclick="showSection('members')">👥 Members</button>
+            <button class="nav-btn" onclick="showSection('paymentMethods')">💳 Payment Methods</button>
             <button class="nav-btn" onclick="showSection('financials')">💰 Financial Overview</button>
             <button class="nav-btn" onclick="showSection('loans')">📋 Loan Applications</button>
         </div>
@@ -82,6 +83,52 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Payment Methods Section -->
+            <div id="paymentMethodsSection" class="content-section" style="display: none;">
+                <div class="stats-section">
+                    <div class="stat-card pending-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="pendingPaymentMethods">0</div>
+                            <div class="stat-label">Pending Verification</div>
+                        </div>
+                    </div>
+                    <div class="stat-card verified-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="verifiedPaymentMethods">0</div>
+                            <div class="stat-label">Verified</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-header">
+                    <h2>💳 Member Payment Methods</h2>
+                    <div class="filter-section">
+                        <button class="filter-btn active" onclick="filterPaymentMethods('all')">All</button>
+                        <button class="filter-btn" onclick="filterPaymentMethods('pending')">Pending</button>
+                        <button class="filter-btn" onclick="filterPaymentMethods('verified')">Verified</button>
+                        <button class="filter-btn" onclick="filterPaymentMethods('rejected')">Rejected</button>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Type</th>
+                            <th>Details</th>
+                            <th>Date Added</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentMethodsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">Loading payment methods...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- Financial Overview Section -->
@@ -181,6 +228,24 @@
                 </div>
                 <div class="modal-body" id="financialDetailsBody">
                     <!-- Financial details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- View Payment Method Modal (proof + verify/reject) -->
+        <div id="viewPaymentMethodModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>Payment Method Details</h2>
+                    <span class="close" onclick="closePaymentMethodModal()">&times;</span>
+                </div>
+                <div class="modal-body" id="paymentMethodDetailsBody">
+                    <!-- Loaded by JS -->
+                </div>
+                <div class="modal-footer" id="paymentMethodActions" style="display: none; padding: 20px 40px 30px; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-success" onclick="confirmVerifyPaymentMethod()">✅ Verify</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRejectPaymentMethod()">❌ Reject</button>
+                    <button type="button" class="btn btn-secondary" onclick="closePaymentMethodModal()">Close</button>
                 </div>
             </div>
         </div>

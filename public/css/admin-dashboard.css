@@ -490,6 +490,16 @@ header {
     padding: 40px;
 }
 
+.modal-footer {
+    padding: 20px 40px 30px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-top: 1px solid #eee;
+    background: #fafbff;
+    border-radius: 0 0 25px 25px;
+}
+
 /* Member Details */
 .member-detail-grid {
     display: grid;
