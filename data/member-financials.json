@@ -33,8 +33,19 @@
       ]
     },
     "loans": {
-      "currentBalance": 0,
-      "currentLoan": null,
+      "currentBalance": 10000,
+      "currentLoan": {
+        "loanType": "Emergency Loan",
+        "amount": 10000,
+        "term": 6,
+        "purpose": "Billing",
+        "notes": "Payment for electricity bills.",
+        "applicationDate": "2026-02-10T11:35:36.531Z",
+        "status": "approved",
+        "monthlyPayment": 1725.4836671088106,
+        "approvedDate": "2026-02-16T05:44:32.125Z",
+        "balance": 10000
+      },
       "history": [
         {
           "loanType": "Emergency Loan",
@@ -43,8 +54,9 @@
           "purpose": "Billing",
           "notes": "Payment for electricity bills.",
           "applicationDate": "2026-02-10T11:35:36.531Z",
-          "status": "pending",
-          "monthlyPayment": 1725.4836671088106
+          "status": "approved",
+          "monthlyPayment": 1725.4836671088106,
+          "approvedDate": "2026-02-16T05:44:32.125Z"
         }
       ]
     }

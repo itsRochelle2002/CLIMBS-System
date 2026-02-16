@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -8,20 +9,24 @@ const dataStore = require('./lib/dataStore');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Persistent data directory (relative to this file so data never resets when run from different cwd)
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// PayMongo webhook must receive raw body for signature verification - register BEFORE json parser
+app.post('/api/webhooks/paymongo', express.raw({ type: 'application/json' }), paymongoWebhookHandler);
+
 // Middleware (higher limit for profile image base64)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-// Create data directory if it doesn't exist
-if (!fs.existsSync('./data')) {
-    fs.mkdirSync('./data');
-}
-
-// Initialize menu file with default items
+// Initialize menu file with default items (only if file does not exist - never overwrite existing data)
 function initializeMenu() {
-    const menuFile = './data/menu.json';
+    const menuFile = path.join(DATA_DIR, 'menu.json');
     if (!fs.existsSync(menuFile)) {
         const defaultMenu = [
             { id: 1, name: 'Chicken Adobo', price: 85, category: 'meals', emoji: '🍗', stock: 50, minStock: 10, available: true },
@@ -35,9 +40,9 @@ function initializeMenu() {
     }
 }
 
-// Initialize employees
+// Initialize employees (only if file does not exist)
 function initializeEmployees() {
-    const empFile = './data/employees.json';
+    const empFile = path.join(DATA_DIR, 'employees.json');
     if (!fs.existsSync(empFile)) {
         const defaultEmployees = [
             { empId: 'EMP001', name: 'Juan Dela Cruz', password: 'emp123', walletBalance: 500, creditBalance: 0 },
@@ -48,9 +53,9 @@ function initializeEmployees() {
     }
 }
 
-// Initialize ordering orders
+// Initialize ordering orders (only if file does not exist)
 function initializeOrderingOrders() {
-    const ordersFile = './data/ordering-orders.json';
+    const ordersFile = path.join(DATA_DIR, 'ordering-orders.json');
     if (!fs.existsSync(ordersFile)) {
         fs.writeFileSync(ordersFile, JSON.stringify([], null, 2));
     }
@@ -80,6 +85,14 @@ app.get('/member-register', (req, res) => {
 
 app.get('/member-dashboard', (req, res) => {
     res.render('member-dashboard');
+});
+
+app.get('/membership/deposit-success', (req, res) => {
+    res.render('deposit-success');
+});
+
+app.get('/membership/deposit-failed', (req, res) => {
+    res.render('deposit-failed');
 });
 
 app.get('/admin-dashboard', (req, res) => {
@@ -128,9 +141,9 @@ app.post('/api/membership/login', async (req, res) => {
 });
 // ============ MEMBER FINANCIAL MANAGEMENT APIs ============
 
-// Initialize member financial data
+// Initialize member financial data (only create empty file if missing - never overwrite)
 function initializeMemberFinancials() {
-    const financialsFile = './data/member-financials.json';
+    const financialsFile = path.join(DATA_DIR, 'member-financials.json');
     if (!fs.existsSync(financialsFile)) {
         fs.writeFileSync(financialsFile, JSON.stringify({}, null, 2));
     }
@@ -143,7 +156,7 @@ initializeMemberFinancials();
 app.get('/api/membership/financial-data', (req, res) => {
     try {
         const { memberId } = req.query;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = {};
         if (fs.existsSync(financialsFile)) {
@@ -183,7 +196,7 @@ app.get('/api/membership/financial-data', (req, res) => {
 app.post('/api/membership/add-share', (req, res) => {
     try {
         const { memberId, amount, paymentMethod, date } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = {};
         if (fs.existsSync(financialsFile)) {
@@ -217,7 +230,8 @@ app.post('/api/membership/add-share', (req, res) => {
         
         fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
         
-        res.json({ success: true });
+        // Return updated financial data so member sees new balance right away (real-time)
+        res.json({ success: true, data: financials[memberId] });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
@@ -226,8 +240,9 @@ app.post('/api/membership/add-share', (req, res) => {
 // API: Savings transaction (deposit/withdrawal)
 app.post('/api/membership/savings-transaction', (req, res) => {
     try {
-        const { memberId, amount, paymentMethod, reason, reference, type, date } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const { memberId, amount, reason, reference, type, date } = req.body;
+        const paymentMethod = req.body.paymentMethod || req.body.paymentMethodUsed || '';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = {};
         if (fs.existsSync(financialsFile)) {
@@ -246,15 +261,18 @@ app.post('/api/membership/savings-transaction', (req, res) => {
             };
         }
         
-        // Process transaction
+        // Process transaction (real-time: deposit goes straight to savings, like GCash)
         if (type === 'deposit') {
             financials[memberId].savings.balance += amount;
+            const transactionId = 'TXN-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
             financials[memberId].savings.history.push({
+                transactionId,
                 type: 'deposit',
                 amount: amount,
                 paymentMethod: paymentMethod,
                 reference: reference || '',
-                date: date
+                date: date,
+                status: 'completed'  // Real transaction - naa dayon sa account, dili pending
             });
         } else if (type === 'withdrawal') {
             // Check if sufficient balance
@@ -263,29 +281,159 @@ app.post('/api/membership/savings-transaction', (req, res) => {
             }
             
             financials[memberId].savings.balance -= amount;
+            const transactionId = 'TXN-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
             financials[memberId].savings.history.push({
+                transactionId,
                 type: 'withdrawal',
                 amount: amount,
                 reason: reason,
                 paymentMethod: paymentMethod || '',
                 date: date,
-                status: 'pending' // Withdrawal needs approval
+                status: 'pending'  // Withdrawal release needs approval
             });
         }
         
         fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
         
-        res.json({ success: true });
+        // Return updated financial data so member sees new savings balance right away (real-time)
+        res.json({ success: true, data: financials[memberId] });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
 
+// ---------- PayMongo: Deposit via GCash (redirect to app, auto-credit after payment) ----------
+const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY || process.env.PAYMONGO_SECRET;
+const PAYMONGO_PUBLIC = process.env.PAYMONGO_PUBLIC_KEY || process.env.PAYMONGO_PUBLIC;
+const BASE_URL = process.env.BASE_URL || '';
+
+async function paymongoCreateSource(amountPesos, memberId, successUrl, failedUrl) {
+    const amountCentavos = Math.round(amountPesos * 100);
+    const res = await fetch('https://api.paymongo.com/v1/sources', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + Buffer.from((PAYMONGO_PUBLIC || PAYMONGO_SECRET) + ':').toString('base64')
+        },
+        body: JSON.stringify({
+            data: {
+                attributes: {
+                    amount: amountCentavos,
+                    currency: 'PHP',
+                    type: 'gcash',
+                    redirect: { success: successUrl, failed: failedUrl },
+                    metadata: { member_id: String(memberId) }
+                }
+            }
+        })
+    });
+    const json = await res.json();
+    if (json.errors && json.errors.length) throw new Error(json.errors[0].detail || 'PayMongo error');
+    return json.data;
+}
+
+async function paymongoCreatePayment(sourceId, amountCentavos) {
+    const res = await fetch('https://api.paymongo.com/v1/payments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + Buffer.from((PAYMONGO_SECRET || '') + ':').toString('base64')
+        },
+        body: JSON.stringify({
+            data: {
+                attributes: {
+                    amount: amountCentavos,
+                    currency: 'PHP',
+                    source: { id: sourceId, type: 'source' }
+                }
+            }
+        })
+    });
+    const json = await res.json();
+    if (json.errors && json.errors.length) throw new Error(json.errors[0].detail || 'PayMongo payment error');
+    return json.data;
+}
+
+function creditMemberSavings(memberId, amount, paymentMethod, transactionId) {
+    const financialsFile = path.join(DATA_DIR, 'member-financials.json');
+    let financials = {};
+    if (fs.existsSync(financialsFile)) {
+        const data = fs.readFileSync(financialsFile, 'utf8');
+        if (data.trim()) financials = JSON.parse(data);
+    }
+    if (!financials[memberId]) {
+        financials[memberId] = {
+            shareCapital: { total: 0, shares: 0, history: [] },
+            savings: { balance: 0, history: [] },
+            loans: { currentBalance: 0, currentLoan: null, history: [] }
+        };
+    }
+    financials[memberId].savings.balance += amount;
+    financials[memberId].savings.history.push({
+        transactionId,
+        type: 'deposit',
+        amount,
+        paymentMethod: paymentMethod || 'GCash (PayMongo)',
+        reference: 'PayMongo',
+        date: new Date().toISOString(),
+        status: 'completed'
+    });
+    fs.writeFileSync(financialsFile, JSON.stringify(financials, null, 2));
+}
+
+// API: Create deposit link (redirect to GCash → pay there → webhook auto-credits)
+app.post('/api/membership/create-deposit-link', async (req, res) => {
+    try {
+        if (!PAYMONGO_PUBLIC && !PAYMONGO_SECRET) {
+            return res.json({ success: false, error: 'PayMongo not configured. Set PAYMONGO_PUBLIC_KEY and PAYMONGO_SECRET_KEY.' });
+        }
+        const { memberId, amount } = req.body;
+        const amt = Math.max(100, Number(amount) || 100);
+        const host = BASE_URL || (req.protocol + '://' + req.get('host'));
+        const successUrl = host + '/membership/deposit-success';
+        const failedUrl = host + '/membership/deposit-failed';
+        const source = await paymongoCreateSource(amt, memberId, successUrl, failedUrl);
+        const checkoutUrl = source.attributes?.checkout_url;
+        if (!checkoutUrl) throw new Error('No checkout URL from PayMongo');
+        res.json({ success: true, checkoutUrl, amount: amt });
+    } catch (err) {
+        res.json({ success: false, error: err.message || 'Failed to create deposit link' });
+    }
+});
+
+// PayMongo webhook: on source.chargeable → credit member then create payment
+function paymongoWebhookHandler(req, res) {
+    res.status(200).send(); // respond immediately so PayMongo doesn't retry
+    let payload;
+    try {
+        payload = JSON.parse(req.body.toString());
+    } catch (_) {
+        return;
+    }
+    if (payload.data?.attributes?.type !== 'source.chargeable') return;
+    const sourceData = payload.data?.attributes?.data;
+    const sourceId = sourceData?.id;
+    const attrs = sourceData?.attributes || {};
+    const amountCentavos = attrs.amount;
+    const memberId = attrs.metadata?.member_id;
+    if (!sourceId || !amountCentavos || !memberId) return;
+    const amount = amountCentavos / 100;
+    const transactionId = 'TXN-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    setImmediate(async () => {
+        try {
+            creditMemberSavings(memberId, amount, 'GCash (PayMongo)', transactionId);
+            if (PAYMONGO_SECRET) await paymongoCreatePayment(sourceId, amountCentavos);
+        } catch (e) {
+            console.error('PayMongo webhook credit/payment error:', e);
+        }
+    });
+}
+
 // API: Loan application
 app.post('/api/membership/loan-application', (req, res) => {
     try {
         const { memberId, loanType, amount, term, purpose, notes, applicationDate, status } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = {};
         if (fs.existsSync(financialsFile)) {
@@ -335,7 +483,7 @@ app.post('/api/membership/loan-application', (req, res) => {
 app.get('/api/membership/payment-methods', (req, res) => {
     try {
         const { memberId } = req.query;
-        const file = './data/member-payment-methods.json';
+        const file = path.join(DATA_DIR, 'member-payment-methods.json');
         let data = {};
         if (fs.existsSync(file)) {
             const raw = fs.readFileSync(file, 'utf8');
@@ -355,7 +503,7 @@ app.post('/api/membership/payment-methods', (req, res) => {
         if (!memberId || !type) {
             return res.status(400).json({ success: false, error: 'memberId and type are required' });
         }
-        const file = './data/member-payment-methods.json';
+        const file = path.join(DATA_DIR, 'member-payment-methods.json');
         let data = {};
         if (fs.existsSync(file)) {
             const raw = fs.readFileSync(file, 'utf8');
@@ -383,7 +531,7 @@ app.post('/api/membership/payment-methods', (req, res) => {
 // API: Get all payment methods (for admin)
 app.get('/api/membership/all-payment-methods', (req, res) => {
     try {
-        const file = './data/member-payment-methods.json';
+        const file = path.join(DATA_DIR, 'member-payment-methods.json');
         let data = {};
         if (fs.existsSync(file)) {
             const raw = fs.readFileSync(file, 'utf8');
@@ -402,7 +550,7 @@ app.post('/api/membership/payment-method-status', (req, res) => {
         if (!memberId || !methodId || !['verified', 'rejected'].includes(status)) {
             return res.status(400).json({ success: false, error: 'memberId, methodId and status (verified|rejected) required' });
         }
-        const file = './data/member-payment-methods.json';
+        const file = path.join(DATA_DIR, 'member-payment-methods.json');
         let data = {};
         if (fs.existsSync(file)) {
             const raw = fs.readFileSync(file, 'utf8');
@@ -430,7 +578,7 @@ app.post('/api/membership/payment-method-status', (req, res) => {
 // API: Get all member financials (for admin)
 app.get('/api/membership/all-financials', (req, res) => {
     try {
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = {};
         if (fs.existsSync(financialsFile)) {
@@ -450,7 +598,7 @@ app.get('/api/membership/all-financials', (req, res) => {
 app.post('/api/membership/approve-loan', (req, res) => {
     try {
         const { memberId, loanIndex } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = JSON.parse(fs.readFileSync(financialsFile, 'utf8'));
         
@@ -481,7 +629,7 @@ app.post('/api/membership/approve-loan', (req, res) => {
 app.post('/api/membership/reject-loan', (req, res) => {
     try {
         const { memberId, loanIndex, reason } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         if (!fs.existsSync(financialsFile)) {
             return res.json({ success: false, error: 'Financials not found' });
         }
@@ -505,7 +653,7 @@ app.post('/api/membership/reject-loan', (req, res) => {
 app.post('/api/membership/loan-payment', (req, res) => {
     try {
         const { memberId, amount, date } = req.body;
-        const financialsFile = './data/member-financials.json';
+        const financialsFile = path.join(DATA_DIR, 'member-financials.json');
         
         let financials = JSON.parse(fs.readFileSync(financialsFile, 'utf8'));
         
@@ -563,6 +711,21 @@ app.post('/api/membership/register', async (req, res) => {
         res.json({ success: true, memberId: memberData.id });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API: Get current member (for dashboard to sync status - para dili "under review" kung na-verify na)
+app.get('/api/membership/me', async (req, res) => {
+    try {
+        const { memberId } = req.query;
+        if (!memberId) return res.json({ success: false, error: 'memberId required' });
+        const members = await dataStore.getMembers();
+        const m = members.find(mem => String(mem.id) === String(memberId));
+        if (!m) return res.json({ success: false, error: 'Member not found' });
+        const { password: _, ...memberData } = m;
+        res.json({ success: true, member: memberData });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
     }
 });
 
@@ -829,7 +992,7 @@ app.get('/api/ordering/admin/overview', async (req, res) => {
 });
 
 if (!process.env.DATABASE_URL) {
-    const adminProfileFile = './data/admin-profile.json';
+    const adminProfileFile = path.join(DATA_DIR, 'admin-profile.json');
     if (!fs.existsSync(adminProfileFile)) {
         fs.writeFileSync(adminProfileFile, JSON.stringify({
             fullName: 'Administrator',
@@ -1126,6 +1289,7 @@ async function start() {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server is running on http://localhost:${PORT}`);
         if (dataStore.useDb) console.log('Using PostgreSQL database (DATABASE_URL)');
+        else console.log('Data saved in:', DATA_DIR);
         const nets = os.networkInterfaces();
         for (const name of Object.keys(nets)) {
             for (const net of nets[name]) {

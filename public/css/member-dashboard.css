@@ -11,7 +11,7 @@ body {
     padding: 0;
 }
 
-/* Header - Fixed at Top */
+/* Header - Fixed at Top (high z-index so logout is always clickable) */
 header {
     background: white;
     padding: 20px 40px;
@@ -23,7 +23,7 @@ header {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 100;
+    z-index: 999;
 }
 
 .header-left h1 {
@@ -52,8 +52,10 @@ header {
 }
 
 .btn-logout {
+    display: inline-block;
     background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
-    color: white;
+    color: white !important;
+    text-decoration: none;
     border: none;
     padding: 14px 30px;
     border-radius: 30px;
@@ -62,6 +64,9 @@ header {
     transition: all 0.3s;
     box-shadow: 0 8px 25px rgba(238, 90, 111, 0.3);
     font-size: 1em;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
 }
 
 .btn-logout:hover {
@@ -503,6 +508,13 @@ header {
 .action-title {
     font-size: 1.2em;
     font-weight: 700;
+}
+
+.action-desc {
+    font-size: 0.85em;
+    opacity: 0.9;
+    margin-top: 6px;
+    font-weight: normal;
 }
 
 /* Modal Styles */

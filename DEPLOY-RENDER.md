@@ -120,6 +120,16 @@ Ayaw usba ang **Root Directory** kung ang `package.json` ug `server.js` naa sa r
 
 Kung naa ka `.env` o config nga kinahanglan (e.g. database URL), i-add sa **Environment** tab. Para karon, **walay required** env vars — pwede nimo i-skip.
 
+**Optional – GCash deposit (PayMongo):** Para ang **Deposit** mudiretso sa GCash ug ma-credit dayon human sa bayad (walay form nga pwede ma-fake), i-set sa Render Environment:
+
+| Key | Value |
+|-----|--------|
+| `PAYMONGO_PUBLIC_KEY` | Public key gikan sa https://dashboard.paymongo.com |
+| `PAYMONGO_SECRET_KEY` | Secret key gikan sa PayMongo |
+| `BASE_URL` | Full URL sa app (e.g. `https://climbs-system-xxxx.onrender.com`) |
+
+Sa PayMongo dashboard, create **Webhook** nga event `source.chargeable` ug URL: `https://your-app.onrender.com/api/webhooks/paymongo`. Kung wala ni, ang **manual deposit** form gihapon ang gamiton.
+
 ### 4.5 Deploy
 
 1. Click **“Create Web Service”**.

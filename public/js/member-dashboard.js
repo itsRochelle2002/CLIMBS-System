@@ -1,39 +1,91 @@
 // Check if member is logged in
-const memberStr = sessionStorage.getItem('member');
-if (!memberStr) {
+let member = null;
+try {
+    const memberStr = sessionStorage.getItem('member');
+    if (!memberStr) {
+        window.location.href = '/membership';
+        throw new Error('no-member');
+    }
+    member = JSON.parse(memberStr);
+    if (!member || typeof member.id === 'undefined') {
+        sessionStorage.removeItem('member');
+        window.location.href = '/membership';
+        throw new Error('invalid-member');
+    }
+} catch (e) {
+    if (e.message === 'no-member' || e.message === 'invalid-member') return;
+    sessionStorage.removeItem('member');
     window.location.href = '/membership';
+    return;
 }
 
-const member = JSON.parse(memberStr);
 let paymentMethods = [];
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    displayMemberInfo();
-    checkMemberStatus();
+// Logout - define early so button always works (even if script fails later)
+window.logout = function() {
+    sessionStorage.removeItem('member');
+    window.location.href = '/membership';
+};
+
+// Run init when DOM is ready
+function runDashboardInit() {
+    // Una: show content based on sessionStorage (verified = dashboard, pending = under review)
+    try {
+        displayMemberInfo();
+        checkMemberStatus();
+    } catch (e) {
+        console.error('Dashboard init error:', e);
+        var badge = document.getElementById('memberBadge');
+        if (badge) badge.textContent = 'Member';
+        var pending = document.getElementById('pendingNotice');
+        var verified = document.getElementById('verifiedContent');
+        if (pending) pending.style.display = 'flex';
+        if (verified) verified.style.display = 'none';
+    }
     loadFinancialData();
     loadPaymentMethods();
-    
-    // Setup payment method form listeners
-    setupPaymentMethodForms();
-});
+    if (typeof setupPaymentMethodForms === 'function') setupPaymentMethodForms();
+
+    // Sync status from server in background (kung na-verify na, next refresh makita na)
+    fetch('/api/membership/me?memberId=' + encodeURIComponent(member.id))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success && data.member && data.member.status) {
+                member = data.member;
+                sessionStorage.setItem('member', JSON.stringify(member));
+                checkMemberStatus();
+            }
+        })
+        .catch(function() {});
+}
+
+// Run as soon as DOM is ready (works whether script is in head+defer or end of body)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runDashboardInit);
+} else {
+    runDashboardInit();
+}
 
 // Display member info in header
 function displayMemberInfo() {
+    if (!member) return;
     const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Member';
-    document.getElementById('memberBadge').textContent = fullName;
+    const el = document.getElementById('memberBadge');
+    if (el) el.textContent = fullName;
 }
 
-// Check member verification status
+// Check member verification status - show Savings/Share Capital/Loans kung verified, else "Under Review"
 function checkMemberStatus() {
-    if (member.status === 'verified') {
-        // Show verified content
-        document.getElementById('verifiedContent').style.display = 'block';
-        document.getElementById('pendingNotice').style.display = 'none';
+    const verifiedEl = document.getElementById('verifiedContent');
+    const pendingEl = document.getElementById('pendingNotice');
+    if (!verifiedEl || !pendingEl) return;
+    var isVerified = member && member.status && String(member.status).toLowerCase() === 'verified';
+    if (isVerified) {
+        verifiedEl.style.display = 'block';
+        pendingEl.style.display = 'none';
     } else {
-        // Show pending notice
-        document.getElementById('verifiedContent').style.display = 'none';
-        document.getElementById('pendingNotice').style.display = 'flex';
+        verifiedEl.style.display = 'none';
+        pendingEl.style.display = 'flex';
     }
 }
 
@@ -127,23 +179,29 @@ function checkPaymentMethodsSetup() {
 
 // Load financial data
 async function loadFinancialData() {
-    if (member.status !== 'verified') return;
+    if (!member || member.status !== 'verified') return;
     
     try {
         const response = await fetch(`/api/membership/financial-data?memberId=${member.id}`);
         const result = await response.json();
         
         if (result.success) {
-            displayFinancialSummary(result.data);
-            displayShareCapitalHistory(result.data.shareCapital);
-            displaySavingsHistory(result.data.savings);
-            displayLoanHistory(result.data.loans);
-            displayMemberSince();
+            updateFinancialUI(result.data);
         }
     } catch (error) {
         console.error('Error loading financial data:', error);
         displayDefaultValues();
     }
+}
+
+// Update all financial displays from data (real-time: use after transaction so member sees new balance right away)
+function updateFinancialUI(data) {
+    if (!data) return;
+    displayFinancialSummary(data);
+    displayShareCapitalHistory(data.shareCapital);
+    displaySavingsHistory(data.savings);
+    displayLoanHistory(data.loans);
+    displayMemberSince();
 }
 
 // Display default values
@@ -235,18 +293,22 @@ function displaySavingsHistory(savingsData) {
         const amountSign = isDeposit ? '+' : '-';
         
         let statusBadge = '';
-        if (transaction.status === 'pending') {
+        if (transaction.status === 'completed') {
+            statusBadge = ' <span class="status-badge status-verified">Credited</span>';
+        } else if (transaction.status === 'pending') {
             statusBadge = ' <span class="status-badge status-pending">Pending</span>';
         } else if (transaction.status === 'approved') {
             statusBadge = ' <span class="status-badge status-verified">Approved</span>';
         } else if (transaction.status === 'rejected') {
             statusBadge = ' <span class="status-badge status-rejected">Rejected</span>';
         }
+        const ref = transaction.transactionId || transaction.reference || '';
+        const refLine = ref ? ` · ${ref}` : '';
         
         transactionDiv.innerHTML = `
             <div class="transaction-info">
-                <div class="transaction-type">${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} - ${transaction.paymentMethodUsed || transaction.reason || ''}${statusBadge}</div>
-                <div class="transaction-date">${new Date(transaction.date).toLocaleString()}</div>
+                <div class="transaction-type">${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} - ${transaction.paymentMethod || transaction.paymentMethodUsed || transaction.reason || ''}${statusBadge}</div>
+                <div class="transaction-date">${new Date(transaction.date).toLocaleString()}${refLine}</div>
             </div>
             <div class="transaction-amount ${amountClass}">${amountSign}₱${transaction.amount.toFixed(2)}</div>
         `;
@@ -450,44 +512,83 @@ function closePaymentSetupModal() {
     document.getElementById('bankSetupForm').reset();
 }
 
-// Deposit modal
+// Deposit modal: GCash redirect (no form to fake) + optional manual fallback
 function showDepositModal() {
-    // Check if has verified payment method
     const verifiedMethods = paymentMethods.filter(m => m.status === 'verified');
+    document.getElementById('depositGcashError').style.display = 'none';
+    document.getElementById('depositGcashError').textContent = '';
+    document.getElementById('depositManualFallback').style.display = 'none';
+    document.getElementById('depositAmountGcash').value = '';
     
-    if (verifiedMethods.length === 0) {
-        alert('Please add and verify a payment method first!');
-        showPaymentSetupModal();
-        return;
-    }
-    
-    // Populate payment method dropdown
     const select = document.getElementById('depositPaymentMethod');
     select.innerHTML = '<option value="">Select your verified payment method</option>';
-    
-    verifiedMethods.forEach((method, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        if (method.type === 'ewallet') {
-            option.textContent = `${method.provider} - ${method.mobile}`;
-        } else {
-            option.textContent = `${method.bankName} - ${method.accountNumber}`;
-        }
-        select.appendChild(option);
-    });
+    if (verifiedMethods.length) {
+        verifiedMethods.forEach((method, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = method.type === 'ewallet' ? `${method.provider} - ${method.mobile}` : `${method.bankName} - ${method.accountNumber}`;
+            select.appendChild(option);
+        });
+    }
     
     document.getElementById('depositModal').style.display = 'block';
 }
 
 function closeDepositModal() {
     document.getElementById('depositModal').style.display = 'none';
-    document.getElementById('depositForm').reset();
+    if (document.getElementById('depositForm')) document.getElementById('depositForm').reset();
 }
 
-// Deposit form submission
+// Amount preset buttons for GCash deposit
+document.querySelectorAll('.btn-amount').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('depositAmountGcash').value = this.getAttribute('data-amount');
+    });
+});
+
+// Pay with GCash: redirect to GCash → after payment webhook auto-credits
+document.getElementById('btnPayWithGcash').addEventListener('click', async function() {
+    const input = document.getElementById('depositAmountGcash');
+    const amount = Math.max(100, parseFloat(input.value) || 100);
+    const errEl = document.getElementById('depositGcashError');
+    const fallbackEl = document.getElementById('depositManualFallback');
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+    this.disabled = true;
+    this.textContent = 'Opening...';
+    try {
+        const response = await fetch('/api/membership/create-deposit-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memberId: member.id, amount: amount })
+        });
+        const result = await response.json();
+        if (result.success && result.checkoutUrl) {
+            window.location.href = result.checkoutUrl;
+            return;
+        }
+        errEl.textContent = result.error || 'Cannot open GCash deposit.';
+        errEl.style.display = 'block';
+        fallbackEl.style.display = 'block';
+    } catch (e) {
+        errEl.textContent = 'Network error. Try again or use manual deposit below.';
+        errEl.style.display = 'block';
+        fallbackEl.style.display = 'block';
+    } finally {
+        this.disabled = false;
+        this.textContent = 'Pay with GCash';
+    }
+});
+
+// Deposit form submission (manual fallback when GCash link not available)
 document.getElementById('depositForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
+    const verifiedMethods = paymentMethods.filter(m => m.status === 'verified');
+    if (verifiedMethods.length === 0) {
+        alert('Please add and verify a payment method first!');
+        return;
+    }
     const methodIndex = document.getElementById('depositPaymentMethod').value;
     const amount = parseFloat(document.getElementById('depositAmount').value);
     const reference = document.getElementById('depositReference').value;
@@ -511,7 +612,6 @@ document.getElementById('depositForm').addEventListener('submit', async function
         reference: reference,
         proof: proofBase64,
         type: 'deposit',
-        status: 'pending',
         date: new Date().toISOString()
     };
     
@@ -525,9 +625,15 @@ document.getElementById('depositForm').addEventListener('submit', async function
         const result = await response.json();
         
         if (result.success) {
-            alert('Deposit request submitted! Pending admin verification.');
             closeDepositModal();
-            loadFinancialData();
+            if (result.data) {
+                updateFinancialUI(result.data);
+                const newBal = result.data.savings?.balance ?? 0;
+                alert(`Na-credit na sa imong Savings! New balance: ₱${newBal.toFixed(2)}`);
+            } else {
+                loadFinancialData();
+                alert('Deposit recorded!');
+            }
         } else {
             alert('Error: ' + (result.error || 'Failed to submit deposit'));
         }
@@ -634,9 +740,15 @@ document.getElementById('withdrawForm').addEventListener('submit', async functio
         const result = await response.json();
         
         if (result.success) {
-            alert('Withdrawal request submitted! Pending admin approval.');
             closeWithdrawModal();
-            loadFinancialData();
+            if (result.data) {
+                updateFinancialUI(result.data);
+                const newBal = result.data.savings?.balance ?? 0;
+                alert(`Withdrawal recorded. Your new savings balance: ₱${newBal.toFixed(2)}`);
+            } else {
+                loadFinancialData();
+                alert('Withdrawal recorded.');
+            }
         } else {
             alert('Error: ' + (result.error || 'Failed to submit withdrawal'));
         }
@@ -679,9 +791,16 @@ document.getElementById('addShareForm').addEventListener('submit', async functio
         const result = await response.json();
         
         if (result.success) {
-            alert('Share capital added successfully!');
             closeAddShareModal();
-            loadFinancialData();
+            if (result.data) {
+                updateFinancialUI(result.data);
+                const total = result.data.shareCapital?.total ?? 0;
+                const shares = result.data.shareCapital?.shares ?? 0;
+                alert(`Share capital added! Total: ₱${total.toFixed(2)} (${shares} share(s)).`);
+            } else {
+                loadFinancialData();
+                alert('Share capital added successfully!');
+            }
         } else {
             alert('Error: ' + (result.error || 'Failed to add share capital'));
         }
@@ -752,12 +871,4 @@ window.onclick = function(event) {
             modal.style.display = 'none';
         }
     });
-}
-
-// Logout
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.removeItem('member');
-        window.location.href = '/membership';
-    }
 }
