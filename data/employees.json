@@ -1,0 +1,31 @@
+[
+  {
+    "empId": "EMP001",
+    "name": "Juan Dela Cruz",
+    "password": "emp123",
+    "walletBalance": 500,
+    "creditBalance": 0
+  },
+  {
+    "empId": "EMP002",
+    "name": "Maria Santos",
+    "password": "emp123",
+    "walletBalance": 300,
+    "creditBalance": 0
+  },
+  {
+    "empId": "EMP003",
+    "name": "Pedro Garcia",
+    "password": "emp123",
+    "walletBalance": 450,
+    "creditBalance": 0
+  },
+  {
+    "empId": "EMP004",
+    "name": "Ledy Joy Bandiola",
+    "email": "bandiola@gmail.com",
+    "password": "ledy@EMP004",
+    "walletBalance": 0,
+    "creditBalance": 0
+  }
+]

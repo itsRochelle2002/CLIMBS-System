@@ -6,34 +6,493 @@
     <title>Member Dashboard - CLIMBS</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/member-dashboard.css">
+    <script src="/js/member-dashboard.js" defer></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <header>
-            <h1>Member Dashboard</h1>
-            <div class="header-actions">
-                <span class="user-info">Welcome, <strong id="memberName"></strong></span>
-                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            <div class="header-left">
+                <h1 style="cursor:pointer" onclick="showSection('overview')" title="Back to overview">👤 Member Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <span class="member-badge" id="memberBadge">Member</span>
+                <a href="/membership" class="btn btn-logout" id="logoutBtn" onclick="sessionStorage.removeItem('member');">Logout</a>
             </div>
         </header>
 
-        <div class="dashboard-content">
-            <div class="member-card">
-                <h2>Your Membership Information</h2>
-                <div class="member-info" id="memberInfo">
-                    <!-- Member info will be loaded here -->
+        <!-- Pending Verification Notice (JS hides this kung verified na) -->
+        <div id="pendingNotice" class="pending-notice" style="display: none;">
+            <div class="notice-icon">⏳</div>
+            <div class="notice-content">
+                <h2>Account Under Review</h2>
+                <p>Your account is being reviewed. Once verified, you can use savings, share capital, and loans. Contact admin if this takes longer than expected.</p>
+            </div>
+        </div>
+
+        <!-- Savings, Share Capital, Loans - show by default; JS will hide kung pending pa -->
+        <div id="verifiedContent" style="display: block;">
+            <!-- Payment Methods Setup Section -->
+            <div id="paymentMethodsSetup" class="payment-methods-section" style="display: none;">
+                <div class="setup-banner">
+                    <div class="setup-icon">⚠️</div>
+                    <div class="setup-content">
+                        <h3>Setup Payment Methods Required</h3>
+                        <p>To deposit or withdraw funds, you must first add and verify your payment method (e-wallet or bank account).</p>
+                        <button class="btn btn-primary" onclick="showPaymentSetupModal()">+ Add Payment Method</button>
+                    </div>
                 </div>
-                
-                <div class="status-section">
-                    <h3>Membership Status</h3>
-                    <div class="status-badge" id="statusBadge">
-                        <!-- Status will be loaded here -->
+            </div>
+
+            <!-- Payment Methods Display -->
+            <div id="paymentMethodsDisplay" class="payment-methods-display" style="display: none;">
+                <div class="methods-header">
+                    <h3>💳 Your Payment Methods</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="showPaymentSetupModal()">+ Add New</button>
+                </div>
+                <div id="paymentMethodsList" class="methods-list">
+                    <!-- Will be loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Financial Summary Cards -->
+            <div class="financial-summary">
+                <div class="summary-card share-capital-card" onclick="showSection('shareCapital')">
+                    <div class="card-icon">💰</div>
+                    <div class="card-info">
+                        <h3>Share Capital</h3>
+                        <div class="card-amount" id="shareCapitalAmount">₱0.00</div>
+                        <p class="card-label">Total Shares</p>
+                    </div>
+                </div>
+
+                <div class="summary-card savings-card" onclick="showSection('savings')">
+                    <div class="card-icon">🏦</div>
+                    <div class="card-info">
+                        <h3>Savings</h3>
+                        <div class="card-amount" id="savingsAmount">₱0.00</div>
+                        <p class="card-label">Total Savings</p>
+                    </div>
+                </div>
+
+                <div class="summary-card loan-card" onclick="showSection('loans')">
+                    <div class="card-icon">📋</div>
+                    <div class="card-info">
+                        <h3>Loans</h3>
+                        <div class="card-amount" id="currentLoanAmount">₱0.00</div>
+                        <p class="card-label">Current Loan Balance</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Share Capital Section -->
+                <div id="shareCapitalSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>💰 Share Capital Management</h2>
+                        <button class="btn btn-primary" onclick="showAddShareModal()">+ Add Shares</button>
+                    </div>
+
+                    <div class="balance-display">
+                        <div class="balance-label">Total Share Capital</div>
+                        <div class="balance-amount" id="shareCapitalBalance">₱0.00</div>
+                        <div class="balance-info">Number of Shares: <span id="numberOfShares">0</span></div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Share Capital History</h3>
+                        <div id="shareCapitalHistory" class="transactions-list">
+                            <p class="no-transactions">No share capital transactions yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savings Section -->
+                <div id="savingsSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>🏦 Savings — Same as GCash</h2>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="showDepositModal()">💵 Cash In / Deposit</button>
+                            <button class="btn btn-secondary" onclick="showWithdrawModal()">💸 Withdraw</button>
+                        </div>
+                    </div>
+
+                    <div class="balance-display">
+                        <div class="balance-label">Available Balance (real-time)</div>
+                        <div class="balance-amount" id="savingsBalance">₱0.00</div>
+                        <div class="balance-info">Interest: 2.5% p.a. • Credited instantly when you Cash In</div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Transaction History (with Reference #)</h3>
+                        <div id="savingsHistory" class="transactions-list">
+                            <p class="no-transactions">No savings transactions yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loans Section -->
+                <div id="loansSection" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>📋 Loan Management</h2>
+                        <button class="btn btn-primary" onclick="showLoanApplicationModal()">📝 Apply for Loan</button>
+                    </div>
+
+                    <div class="loan-status-cards">
+                        <div class="loan-status-card">
+                            <div class="status-label">Current Loan Balance</div>
+                            <div class="status-value" id="loanBalance">₱0.00</div>
+                        </div>
+                        <div class="loan-status-card">
+                            <div class="status-label">Monthly Payment</div>
+                            <div class="status-value" id="monthlyPayment">₱0.00</div>
+                        </div>
+                        <div class="loan-status-card">
+                            <div class="status-label">Loan Status</div>
+                            <div class="status-value" id="loanStatus">No Active Loan</div>
+                        </div>
+                    </div>
+
+                    <div class="transactions-container">
+                        <h3>Loan Applications & History</h3>
+                        <div id="loanHistory" class="transactions-list">
+                            <p class="no-transactions">No loan applications yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Welcome/Overview Section (Default) -->
+                <div id="overviewSection" class="content-section">
+                    <div class="welcome-banner">
+                        <h2>Welcome to CLIMBS Member Portal!</h2>
+                        <p>Real-time balance, Cash In via GCash, instant credit — same experience as GCash.</p>
+                    </div>
+
+                    <div class="quick-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon">👤</div>
+                            <div class="stat-info">
+                                <div class="stat-label">Member Since</div>
+                                <div class="stat-value" id="memberSince">-</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-info">
+                                <div class="stat-label">Status</div>
+                                <div class="stat-value verified-status">Verified Member</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions">
+                        <h3>Quick Actions (GCash-style)</h3>
+                        <div class="action-grid">
+                            <button class="action-card" onclick="showSection('shareCapital')">
+                                <div class="action-icon">💰</div>
+                                <div class="action-title">Share Capital</div>
+                                <div class="action-desc">Add shares, view history</div>
+                            </button>
+                            <button class="action-card" onclick="showSection('savings'); showDepositModal();">
+                                <div class="action-icon">💵</div>
+                                <div class="action-title">Cash In</div>
+                                <div class="action-desc">Deposit via GCash, instant credit</div>
+                            </button>
+                            <button class="action-card" onclick="showSection('savings')">
+                                <div class="action-icon">🏦</div>
+                                <div class="action-title">Savings & History</div>
+                                <div class="action-desc">Real-time balance, transactions</div>
+                            </button>
+                            <button class="action-card" onclick="showSection('loans')">
+                                <div class="action-icon">📋</div>
+                                <div class="action-title">Loans</div>
+                                <div class="action-desc">Apply, view status</div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="/js/member-dashboard.js"></script>
+    <!-- Payment Method Setup Modal -->
+    <div id="paymentSetupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Payment Method</h2>
+                <span class="close" onclick="closePaymentSetupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-method-tabs">
+                    <button class="method-tab active" onclick="switchMethodTab('ewallet')">📱 E-Wallet</button>
+                    <button class="method-tab" onclick="switchMethodTab('bank')">🏦 Bank Account</button>
+                </div>
+
+                <!-- E-Wallet Form -->
+                <form id="ewalletSetupForm" class="method-setup-form">
+                    <div class="form-group">
+                        <label>E-Wallet Provider *</label>
+                        <select id="ewalletProvider" required>
+                            <option value="">Select Provider</option>
+                            <option value="GCash">GCash</option>
+                            <option value="PayMaya">PayMaya / Maya</option>
+                            <option value="GrabPay">GrabPay</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Registered Mobile Number *</label>
+                        <input type="tel" id="ewalletMobile" placeholder="09XXXXXXXXX" maxlength="11" required>
+                        <small>Must match your e-wallet registered number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="ewalletName" required>
+                        <small>Full name as registered in e-wallet</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload Screenshot of E-Wallet Profile *</label>
+                        <input type="file" id="ewalletProof" accept="image/*" required>
+                        <small>Show your name and mobile number (Max 5MB)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit for Verification</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Bank Account Form -->
+                <form id="bankSetupForm" class="method-setup-form" style="display: none;">
+                    <div class="form-group">
+                        <label>Bank Name *</label>
+                        <select id="bankName" required>
+                            <option value="">Select Bank</option>
+                            <option value="BDO">BDO</option>
+                            <option value="BPI">BPI</option>
+                            <option value="Metrobank">Metrobank</option>
+                            <option value="Unionbank">Unionbank</option>
+                            <option value="Security Bank">Security Bank</option>
+                            <option value="LandBank">LandBank</option>
+                            <option value="PNB">PNB</option>
+                            <option value="RCBC">RCBC</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Number *</label>
+                        <input type="text" id="bankAccountNumber" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="bankAccountName" required>
+                        <small>Must exactly match your bank account</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload Bank Statement or Passbook *</label>
+                        <input type="file" id="bankProof" accept="image/*,.pdf" required>
+                        <small>Show account name and number (Max 5MB)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit for Verification</button>
+                        <button type="button" class="btn btn-secondary" onclick="closePaymentSetupModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit Modal: Pay via GCash (redirect to app → auto-credit) -->
+    <div id="depositModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💵 Cash In via GCash (Same as GCash)</h2>
+                <span class="close" onclick="closeDepositModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="deposit-instructions" style="margin-bottom: 1rem;">
+                    <p>Mu-open ang GCash (or browser) para bayaran. Human sa payment, <strong>na-credit dayon</strong> sa imong savings—walay form nga pwede ma-fake.</p>
+                </div>
+                <div class="form-group">
+                    <label>Amount (₱)</label>
+                    <div class="amount-presets" style="display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;">
+                        <button type="button" class="btn btn-secondary btn-amount" data-amount="500">₱500</button>
+                        <button type="button" class="btn btn-secondary btn-amount" data-amount="1000">₱1,000</button>
+                        <button type="button" class="btn btn-secondary btn-amount" data-amount="2000">₱2,000</button>
+                        <button type="button" class="btn btn-secondary btn-amount" data-amount="5000">₱5,000</button>
+                    </div>
+                    <input type="number" id="depositAmountGcash" min="100" step="50" placeholder="Or enter amount (min ₱100)" style="width:100%; padding:10px;">
+                </div>
+                <div class="form-actions" style="margin-top:1rem;">
+                    <button type="button" id="btnPayWithGcash" class="btn btn-primary">Pay with GCash</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeDepositModal()">Cancel</button>
+                </div>
+                <div id="depositGcashError" class="error-message" style="display:none; margin-top:0.5rem;"></div>
+                <div id="depositManualFallback" style="display:none; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #ddd;">
+                    <p><strong>Or submit manual deposit</strong> (if GCash link is not available):</p>
+                    <form id="depositForm">
+                        <div class="form-group">
+                            <label>Your Payment Method *</label>
+                            <select id="depositPaymentMethod" required>
+                                <option value="">Select your verified payment method</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount (₱) *</label>
+                            <input type="number" id="depositAmount" min="100" step="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Reference Number *</label>
+                            <input type="text" id="depositReference" placeholder="e.g. GCash Ref: 1234567890" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Proof of Payment *</label>
+                            <input type="file" id="depositProof" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Manual Deposit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Withdraw from Savings</h2>
+                <span class="close" onclick="closeWithdrawModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="withdrawal-notice-important">
+                    <h4>⚠️ Important Withdrawal Information:</h4>
+                    <ul>
+                        <li>Funds will be sent to your verified payment method</li>
+                        <li>Processing time: 2-3 business days after approval</li>
+                        <li>Minimum withdrawal: ₱100.00</li>
+                        <li>Subject to admin approval</li>
+                    </ul>
+                </div>
+
+                <form id="withdrawForm">
+                    <div class="form-group">
+                        <label>Available Balance</label>
+                        <div class="balance-highlight" id="withdrawAvailableBalance">₱0.00</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Withdrawal Amount (₱) *</label>
+                        <input type="number" id="withdrawAmount" min="100" step="50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Withdraw To *</label>
+                        <select id="withdrawPaymentMethod" required>
+                            <option value="">Select destination account</option>
+                        </select>
+                    </div>
+
+                    <div id="withdrawDestination" class="selected-method-display" style="display: none;">
+                        <!-- Will show selected payment method details -->
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reason for Withdrawal *</label>
+                        <textarea id="withdrawReason" rows="3" required placeholder="e.g., Medical expenses, Emergency, etc."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Withdrawal Request</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeWithdrawModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Share Modal -->
+    <div id="addShareModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Add Share Capital</h2>
+                <span class="close" onclick="closeAddShareModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addShareForm">
+                    <div class="form-group">
+                        <label>Amount (₱)</label>
+                        <input type="number" id="shareAmount" min="100" step="100" required>
+                        <small>Minimum: ₱100.00 per share</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="sharePaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAddShareModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loan Application Modal -->
+    <div id="loanApplicationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Loan Application</h2>
+                <span class="close" onclick="closeLoanApplicationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="loanApplicationForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loan Type</label>
+                            <select id="loanType" required>
+                                <option value="">Select Loan Type</option>
+                                <option value="Regular Loan">Regular Loan</option>
+                                <option value="Emergency Loan">Emergency Loan</option>
+                                <option value="Education Loan">Education Loan</option>
+                                <option value="Housing Loan">Housing Loan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Loan Amount (₱)</label>
+                            <input type="number" id="loanAmount" min="5000" step="1000" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loan Term (months)</label>
+                            <input type="number" id="loanTerm" min="6" max="60" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Purpose</label>
+                            <input type="text" id="loanPurpose" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Additional Notes</label>
+                        <textarea id="loanNotes" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Application</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeLoanApplicationModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Registration - CLIMBS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/employee-register.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Employee Registration</h1>
+            <a href="/ordering-system" class="back-btn">← Back to Login</a>
+        </header>
+
+        <div class="register-container">
+            <div class="register-card">
+                <div class="card-header">
+                    <h2>Create Employee Account</h2>
+                    <p>Register to access the canteen ordering system</p>
+                </div>
+
+                <form id="employeeRegisterForm">
+                    <div class="form-group">
+                        <label for="empId">Employee ID *</label>
+                        <input type="text" id="empId" required placeholder="e.g., EMP001">
+                        <small>Your unique employee identification number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fullName">Full Name *</label>
+                        <input type="text" id="fullName" required placeholder="e.g., Juan Dela Cruz">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" required placeholder="e.g., juan@climbs.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" required minlength="6">
+                        <small>Format: yourname@ID (e.g., juan@EMP001)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+
+                    <div id="registerError" class="error-message" style="display: none;"></div>
+
+                    <button type="submit" class="btn btn-register">Register Account</button>
+                    
+                    <div class="login-link">
+                        Already have an account? <a href="/ordering-system">Login here</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/employee-register.js"></script>
+</body>
+</html>

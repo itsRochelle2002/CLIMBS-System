@@ -3,214 +3,459 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member Registration - CLIMBS</title>
+    <title>Membership Application - CLIMBS</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/member-register.css">
+    <link rel="stylesheet" href="/css/climbs-membership.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>New Member Registration</h1>
-            <a href="/membership" class="back-btn">← Back to Login</a>
-        </header>
+        <div class="form-actions-top no-print">
+            <a href="/membership" class="btn-back">← Back to Login</a>
+            <div class="top-buttons">
+                <button onclick="window.print()" class="btn-print">🖨️ Print Application</button>
+                <button type="button" id="btnSavePdf" class="btn-pdf">📄 Save PDF</button>
+            </div>
+        </div>
 
-        <!-- Step 1: Account Setup -->
-        <div class="registration-step" id="step1">
-            <div class="step-container">
-                <div class="step-header">
-                    <h2>Step 1: Create Your Account</h2>
-                    <p>Set up your login credentials</p>
+        <div class="application-form" id="printableForm">
+            <!-- PAGE 1 -->
+            <div class="page page-1">
+                <!-- Header with Logo -->
+                <div class="form-header">
+                    <div class="logo-container">
+                        <div class="logo-circle">
+                            <div class="logo-text">CESLA</div>
+                        </div>
+                    </div>
+                    <div class="header-info">
+                        <h1>CESLA Multi-Purpose Cooperative</h1>
+                        <p>CLIMBS Bldg., Upper Zone 5, National Highway, Bulua, Cagayan De Oro City</p>
+                        <p>Email: cec@climbs.coop</p>
+                    </div>
+                    <div class="photo-box">
+                        <span>2x2 Photo</span>
+                    </div>
                 </div>
 
-                <form id="accountForm">
-                    <div class="form-section">
-                        <div class="form-group">
-                            <label for="email">Email Address *</label>
-                            <input type="email" id="email" required>
-                            <small>This will be your username for login</small>
+                <h2 class="form-title">APPLICATION FORM</h2>
+
+                <form id="membershipForm">
+                    <!-- Application Details -->
+                    <div class="form-row">
+                        <div class="form-field half">
+                            <label>Application Date:</label>
+                            <input type="date" id="applicationDate" required>
+                        </div>
+                        <div class="form-field half">
+                            <label>Application No:</label>
+                            <input type="text" id="applicationNo" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Personal Details Section -->
+                    <div class="section-title">PERSONAL DETAILS</div>
+                    
+                    <div class="form-row">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="radio" name="title" value="Mr" required> Mr.
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="title" value="Mrs"> Mrs.
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="title" value="Ms"> Ms.
+                            </label>
+                        </div>
+                        <div class="checkbox-group">
+                            <label>Gender:</label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="gender" value="Male" required> Male
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="gender" value="Female"> Female
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Last Name *</label>
+                            <input type="text" id="lastName" required>
+                        </div>
+                        <div class="form-field">
+                            <label>First Name *</label>
+                            <input type="text" id="firstName" required>
+                        </div>
+                        <div class="form-field">
+                            <label>Middle Name</label>
+                            <input type="text" id="middleName">
+                        </div>
+                        <div class="form-field small">
+                            <label>Suffix</label>
+                            <input type="text" id="suffix">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Date of Birth (MM/DD/YYYY) *</label>
+                            <input type="date" id="birthdate" required>
+                        </div>
+                        <div class="form-field">
+                            <label>Place of Birth *</label>
+                            <input type="text" id="placeOfBirth" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Nationality:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="radio" name="nationality" value="Filipino" required> Filipino
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="radio" name="nationality" value="Others"> Others (please specify)
+                                </label>
+                                <input type="text" id="nationalityOther" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field half">
+                            <label>Religion:</label>
+                            <input type="text" id="religion">
+                        </div>
+                        <div class="form-field half">
+                            <label>Number of Dependents:</label>
+                            <input type="number" id="dependents" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Civil Status:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="radio" name="civilStatus" value="Single" required> Single
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="radio" name="civilStatus" value="Married"> Married
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="radio" name="civilStatus" value="Legally Separated"> Legally Separated
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="radio" name="civilStatus" value="Others"> Others
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field third">
+                            <label>SSS/GSIS Number:</label>
+                            <input type="text" id="sssNumber">
+                        </div>
+                        <div class="form-field third">
+                            <label>Tax Identification Number:</label>
+                            <input type="text" id="tinNumber">
+                        </div>
+                        <div class="form-field third">
+                            <label>Other IDs:</label>
+                            <input type="text" id="otherIds">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Who recommended you to CEC?</label>
+                            <input type="text" id="referredBy">
+                        </div>
+                        <div class="form-field half">
+                            <label>Contact No:</label>
+                            <input type="tel" id="referredContact">
+                        </div>
+                    </div>
+
+                    <!-- Family Members Section -->
+                    <div class="section-title">FAMILY MEMBERS</div>
+                    
+                    <table class="family-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Relation</th>
+                                <th>Age</th>
+                                <th>Occupation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="text" id="family1Name"></td>
+                                <td><input type="text" id="family1Relation"></td>
+                                <td><input type="number" id="family1Age" min="0"></td>
+                                <td><input type="text" id="family1Occupation"></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" id="family2Name"></td>
+                                <td><input type="text" id="family2Relation"></td>
+                                <td><input type="number" id="family2Age" min="0"></td>
+                                <td><input type="text" id="family2Occupation"></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" id="family3Name"></td>
+                                <td><input type="text" id="family3Relation"></td>
+                                <td><input type="number" id="family3Age" min="0"></td>
+                                <td><input type="text" id="family3Occupation"></td>
+                            </tr>
+                            <tr>
+                                <td><input type="text" id="family4Name"></td>
+                                <td><input type="text" id="family4Relation"></td>
+                                <td><input type="number" id="family4Age" min="0"></td>
+                                <td><input type="text" id="family4Occupation"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Contact Details Section -->
+                    <div class="section-title">CONTACT DETAILS</div>
+                    
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Present Address: *</label>
+                            <input type="text" id="presentAddress" required>
+                        </div>
+                        <div class="form-field small">
+                            <label>Zip Code:</label>
+                            <input type="text" id="zipCode1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field small">
+                            <label>Length of Stay in Present Address:</label>
+                            <input type="number" id="stayYears" min="0" placeholder="years">
+                        </div>
+                        <div class="form-field small">
+                            <label>&nbsp;</label>
+                            <input type="number" id="stayMonths" min="0" max="11" placeholder="months">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Permanent Address:</label>
+                            <input type="text" id="permanentAddress">
+                        </div>
+                        <div class="form-field small">
+                            <label>Zip Code:</label>
+                            <input type="text" id="zipCode2">
+                        </div>
+                    </div>
+
+                    <div class="page-break"></div>
+
+                    <!-- PAGE 2 -->
+                    <div class="section-title">EMPLOYMENT DETAILS</div>
+
+                    <div class="employment-grid">
+                        <!-- Employed Section -->
+                        <div class="employment-section">
+                            <h4>EMPLOYED</h4>
+                            <div class="form-field">
+                                <label>Employer/Business Name:</label>
+                                <input type="text" id="employerName">
+                            </div>
+                            <div class="form-field">
+                                <label>Office Address:</label>
+                                <input type="text" id="officeAddress">
+                            </div>
+                            <div class="form-field">
+                                <label>Nature of Business:</label>
+                                <input type="text" id="businessNature">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field half">
+                                    <label>Office No:</label>
+                                    <input type="tel" id="officeNo">
+                                </div>
+                                <div class="form-field half">
+                                    <label>Fax No:</label>
+                                    <input type="tel" id="faxNo">
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label>Employment Type:</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="empType" value="Private"> Private
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="empType" value="Government"> Government
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="empType" value="Others"> Others
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label>Position/Rank:</label>
+                                <input type="text" id="position">
+                            </div>
+                            <div class="form-field">
+                                <label>Monthly Income:</label>
+                                <input type="number" id="monthlyIncome" min="0">
+                            </div>
+                            <div class="form-field">
+                                <label style="font-size: 0.85em;">*If less than six (6) months in current employment, please fill-up below:</label>
+                            </div>
+                            <div class="form-field">
+                                <label>Previous Employer:</label>
+                                <input type="text" id="prevEmployer">
+                            </div>
+                            <div class="form-field">
+                                <label>Yrs. in Company:</label>
+                                <input type="text" id="prevYears">
+                            </div>
+                            <div class="form-field">
+                                <label>Position/Rank:</label>
+                                <input type="text" id="prevPosition">
+                            </div>
+                        </div>
+
+                        <!-- Self-Employed Section -->
+                        <div class="employment-section">
+                            <h4>SELF-EMPLOYED</h4>
+                            <div class="form-field">
+                                <label>Name of Business:</label>
+                                <input type="text" id="businessName">
+                            </div>
+                            <div class="form-field">
+                                <label>Type of Business:</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="businessType" value="Sole Prop"> Sole Prop
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="businessType" value="Partnership"> Partnership
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="businessType" value="Corp"> Corp
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label>Nature of Business:</label>
+                                <input type="text" id="selfBusinessNature">
+                            </div>
+                            <div class="form-field">
+                                <label>Asset Size of Business (Php):</label>
+                                <input type="number" id="assetSize" min="0">
+                            </div>
+                            <div class="form-field">
+                                <label>Share in Business (%):</label>
+                                <input type="number" id="businessShare" min="0" max="100">
+                            </div>
+                            <div class="form-field">
+                                <label>Monthly Income:</label>
+                                <input type="number" id="selfMonthlyIncome" min="0">
+                            </div>
+                        </div>
+
+                        <!-- Unemployed Section -->
+                        <div class="employment-section">
+                            <h4>UNEMPLOYED</h4>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="unemployedType" value="Housewife"> Housewife
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="unemployedType" value="Student"> Student
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="unemployedType" value="Others"> Others (please specify)
+                                </label>
+                                <input type="text" id="unemployedOther" style="margin-top: 10px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Login Section - hidden when printing -->
+                    <div class="account-login-section no-print">
+                        <div class="section-title" style="margin-top: 30px;">ACCOUNT LOGIN INFORMATION</div>
+                        
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Email Address (Username) *</label>
+                                <input type="email" id="email" required>
+                            </div>
                         </div>
 
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="password">Password *</label>
+                            <div class="form-field half">
+                                <label>Password *</label>
                                 <input type="password" id="password" minlength="6" required>
-                                <small>Minimum 6 characters</small>
                             </div>
-                            <div class="form-group">
-                                <label for="confirmPassword">Confirm Password *</label>
+                            <div class="form-field half">
+                                <label>Confirm Password *</label>
                                 <input type="password" id="confirmPassword" required>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Next: Fill Membership Form →</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Step 2: Membership Form -->
-        <div class="registration-step" id="step2" style="display: none;">
-            <div class="step-container">
-                <div class="step-header">
-                    <h2>Step 2: Membership Application Form</h2>
-                    <p>Complete your membership information</p>
-                </div>
-
-                <div class="form-container" id="printableArea">
-                    <div class="form-logo">
-                        <h3>CLIMBS Life and General Insurance Cooperative</h3>
-                        <p>Membership Application Form</p>
+                    <!-- Declaration -->
+                    <div class="declaration">
+                        <p>I/We hereby certify that all the data and statements in this application are correct and are made for obtaining credit, and the signature(s) appearing thereon is(are) genuine. I/We authorize you to obtain such information as you may require concerning the statements made in this application and that the sources which you may apply are authorized to provide any information relative to this application. I/We agree this will remain your property whether the credit is granted or not.</p>
                     </div>
 
-                    <form id="membershipForm">
-                        <!-- Personal Information -->
-                        <div class="form-section">
-                            <h3>Personal Information</h3>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="lastName">Last Name *</label>
-                                    <input type="text" id="lastName" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="firstName">First Name *</label>
-                                    <input type="text" id="firstName" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="middleName">Middle Name</label>
-                                    <input type="text" id="middleName">
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="birthdate">Date of Birth *</label>
-                                    <input type="date" id="birthdate" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="gender">Gender *</label>
-                                    <select id="gender" required>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="civilStatus">Civil Status *</label>
-                                    <select id="civilStatus" required>
-                                        <option value="">Select Status</option>
-                                        <option value="Single">Single</option>
-                                        <option value="Married">Married</option>
-                                        <option value="Widowed">Widowed</option>
-                                        <option value="Separated">Separated</option>
-                                    </select>
-                                </div>
-                            </div>
+                    <!-- Signatures -->
+                    <div class="signature-section">
+                        <div class="signature-box">
+                            <div class="signature-line"></div>
+                            <label>Signature of Applicant over Printed Name</label>
                         </div>
-
-                        <!-- Contact Information -->
-                        <div class="form-section">
-                            <h3>Contact Information</h3>
-                            
-                            <div class="form-group">
-                                <label for="address">Complete Address *</label>
-                                <textarea id="address" rows="3" required></textarea>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="mobile">Mobile Number *</label>
-                                    <input type="tel" id="mobile" placeholder="09XX-XXX-XXXX" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="telephone">Telephone (Optional)</label>
-                                    <input type="tel" id="telephone">
-                                </div>
-                            </div>
+                        <div class="signature-box">
+                            <div class="signature-line"></div>
+                            <label>Signature of Spouse over Printed Name</label>
                         </div>
-
-                        <!-- Beneficiary Information -->
-                        <div class="form-section">
-                            <h3>Beneficiary Information</h3>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="beneficiaryName">Beneficiary Full Name *</label>
-                                    <input type="text" id="beneficiaryName" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="relationship">Relationship *</label>
-                                    <input type="text" id="relationship" required>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="beneficiaryContact">Beneficiary Contact Number *</label>
-                                    <input type="tel" id="beneficiaryContact" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="beneficiaryBirthdate">Beneficiary Birthdate *</label>
-                                    <input type="date" id="beneficiaryBirthdate" required>
-                                </div>
-                            </div>
+                        <div class="signature-box">
+                            <div class="signature-line"></div>
+                            <label>Witnessed by</label>
                         </div>
+                    </div>
 
-                        <!-- Share Capital -->
-                        <div class="form-section">
-                            <h3>Share Capital Subscription</h3>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="shareAmount">Initial Share Amount (₱) *</label>
-                                    <input type="number" id="shareAmount" min="100" step="100" required>
-                                    <small>Minimum: ₱100.00</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="paymentMode">Payment Mode *</label>
-                                    <select id="paymentMode" required>
-                                        <option value="">Select Payment Mode</option>
-                                        <option value="Cash">Cash</option>
-                                        <option value="Check">Check</option>
-                                        <option value="Bank Transfer">Bank Transfer</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Form Actions -->
+                    <div class="form-actions no-print">
+                        <button type="submit" class="btn btn-submit">💾 Submit Application</button>
+                    </div>
 
-                        <!-- Signature Section -->
-                        <div class="form-section signature-section">
-                            <h3>Applicant's Signature</h3>
-                            <div class="signature-box">
-                                <p>I hereby apply for membership in CLIMBS Life and General Insurance Cooperative and agree to abide by its by-laws and regulations.</p>
-                                <div class="signature-line">
-                                    <div class="sig-line">
-                                        <span>_________________________________</span>
-                                        <small>Signature Over Printed Name</small>
-                                    </div>
-                                    <div class="sig-line">
-                                        <span>_________________________________</span>
-                                        <small>Date</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="form-actions no-print">
-                            <button type="button" class="btn btn-secondary" onclick="goBackToStep1()">← Back</button>
-                            <button type="submit" class="btn btn-primary">💾 Save Application</button>
-                            <button type="button" class="btn btn-print" onclick="printForm()">🖨️ Print Form</button>
-                        </div>
-
-                        <!-- Success Message -->
-                        <div id="successMessage" class="success-message" style="display: none;"></div>
-                    </form>
-                </div>
+                    <div id="successMessage" class="success-message" style="display: none;"></div>
+                </form>
             </div>
         </div>
     </div>
 
-    <script src="/js/member-register.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/member-register-form.js"></script>
+    <script>
+        document.getElementById('btnSavePdf').addEventListener('click', function() {
+            var el = document.getElementById('printableForm');
+            var noPrint = el.querySelectorAll('.no-print');
+            noPrint.forEach(function(node) { node.style.display = 'none'; });
+            var opt = {
+                margin: 10,
+                filename: 'Membership-Application-' + (new Date().toISOString().slice(0,10)) + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(el).save().then(function() {
+                noPrint.forEach(function(node) { node.style.display = ''; });
+            });
+        });
+    </script>
 </body>
 </html>
